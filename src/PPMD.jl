@@ -1,4 +1,4 @@
-module jPPMD
+module PPMD
 
 export ParticleLoop, execute, READ, WRITE, KADevice, KACPU, KACUDADevice
 

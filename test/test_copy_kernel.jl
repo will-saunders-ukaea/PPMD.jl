@@ -1,4 +1,4 @@
-using jPPMD
+using PPMD
 using Test
 using CUDA
 using LinearAlgebra

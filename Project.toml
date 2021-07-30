@@ -1,4 +1,4 @@
-name = "jPPMD"
+name = "PPMD"
 uuid = "d34cf64c-c676-4d9c-b1a4-7b967ea2c402"
 authors = ["Will Saunders <will.saunders@ukaea.uk>"]
 version = "0.1.0"
