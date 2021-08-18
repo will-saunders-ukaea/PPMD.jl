@@ -5,7 +5,7 @@ using KernelAbstractions
 
 
 function ParticleLoop(
-    target::KADevice,
+    target,
     kernel,
     args
 )

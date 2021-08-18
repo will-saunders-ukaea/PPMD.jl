@@ -1,6 +1,6 @@
 module PPMD
 
-export ParticleLoop, execute, READ, WRITE, KADevice, KACPU, KACUDADevice
+export ParticleLoop, execute, READ, WRITE, KernelAbstractionsDevice, KACPU, KACUDADevice
 
 
 include("target_devices.jl")
