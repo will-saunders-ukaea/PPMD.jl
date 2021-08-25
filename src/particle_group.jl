@@ -1,4 +1,4 @@
-export ParticleGroup, add_particles, remove_particles
+export ParticleGroup, add_particles, remove_particles, getindex
 
 
 """
@@ -39,6 +39,14 @@ end
 
 
 """
+Allow access to ParticleDats in a ParticleGroup using subscripts.
+"""
+function Base.getindex(group::ParticleGroup, key::String)
+    return group.particle_dats[key]
+end
+
+
+"""
 Add new particles to a ParticleGroup instance. New particle data is passed as a
 Dict where the keys are the strings that name the destination ParticleDats and
 the values are Arrays of the appropriate size. i.e. The number of rows
@@ -66,10 +74,12 @@ function add_particles(group::ParticleGroup, particle_data::Dict)
 
     end
     
-    # expand the particle dat storage to allocate space for the new particles
     group.npart_local += N
     for dx in group.particle_dats
         dat = dx.second
+
+        # expand the particle dat storage to allocate space for the new
+        # particles
         grow_particle_dat(dat, N + size(dat.data)[1])
         if (dx.first in keys(particle_data))
             new_data = particle_data[dx.first]
@@ -77,7 +87,6 @@ function add_particles(group::ParticleGroup, particle_data::Dict)
             new_data = zeros(dat.dtype, (N, dat.ncomp))
         end
         append_particle_data(dat, new_data)
-        println(dat.npart_local, " ", group.npart_local)
         @assert dat.npart_local == group.npart_local
     end
 

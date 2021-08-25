@@ -69,11 +69,16 @@ function grow_particle_dat(particle_dat, N)
     if (size(particle_dat.data)[1] >= N)
         return
     end
-
+    
+    # create a new buffer of the required size
     new_data = particle_data_buffer(
         particle_dat.dtype, (N, particle_dat.ncomp), particle_dat.compute_target
     )
-
+    
+    # copy the old data into the new buffer
+    copy_particle_data(new_data, particle_dat.data, particle_dat.compute_target)
+    
+    # assign the new buffer to the particledat
     particle_dat.data = new_data
 
 end

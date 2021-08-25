@@ -32,11 +32,11 @@ function ParticleLoop(
     # maybe this should be a struct that contains all the data and a function?
     function loop_wrapper()
         # TODO establish a robust method to hande the number of particles
-        N = size(first(values(args))[1], 1)
+        N = first(values(args))[1].npart_local
 
         # Assemble the args for the call.
         # TODO need a robust way to handle temporaries from reductions etc
-        call_args = (ax[1] for ax in values(args))
+        call_args = (ax[1].data for ax in values(args))
         
         # call the loop itself
         loop_func = new_kernel()(target.device, target.workgroup_size)
