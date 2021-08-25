@@ -3,6 +3,7 @@ using Test
 using CUDA
 using LinearAlgebra
 
+
 @testset "CPU_copy_kernel $spec" for spec in (KACPU(), KACUDADevice())
 
     target_device = spec
