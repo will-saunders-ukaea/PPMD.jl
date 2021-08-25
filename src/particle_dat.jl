@@ -1,4 +1,4 @@
-export ParticleDat
+export ParticleDat, getindex
 
 
 """
@@ -16,6 +16,15 @@ mutable struct ParticleDat
     function ParticleDat(ncomp::Int64, dtype::DataType=Float64; position::Bool=false)
         return new(ncomp, dtype, position, BigInt(0))
     end
+end
+
+
+"""
+Allow access to ParticleDats data using subscripts.
+"""
+function Base.getindex(dat::ParticleDat, key...)
+    base_array = SubArray(dat.data, (1:dat.npart_local, 1:dat.ncomp))
+    return base_array[key...]
 end
 
 
