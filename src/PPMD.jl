@@ -6,6 +6,10 @@ export ParticleLoop, execute, READ, WRITE, KernelAbstractionsDevice, KACPU, KACU
 include("target_devices.jl")
 include("particle_loop.jl")
 include("access.jl")
+include("domain.jl")
+include("particle_group.jl")
+include("particle_dat.jl")
+include("utility.jl")
 
 
 function execute(loop)
