@@ -4,7 +4,9 @@ using CUDA
 using CUDAKernels
 
 
+"Base type for targets built on top of KernelAbstractions"
 abstract type KernelAbstractionsDevice end
+
 
 struct KACPU <: KernelAbstractionsDevice
     device
@@ -14,6 +16,7 @@ struct KACPU <: KernelAbstractionsDevice
         return new(CPU(), workgroup_size, Array)
     end
 end
+
 
 struct KACUDADevice <: KernelAbstractionsDevice
     device

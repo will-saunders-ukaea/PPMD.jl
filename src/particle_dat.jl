@@ -1,6 +1,9 @@
-export ParticleDat, particle_data_buffer, init_particle_data, copy_particle_data, grow_particle_dat, append_particle_data
+export ParticleDat
 
 
+"""
+Struct to hold per particle properties. e.g. Positions, charge.
+"""
 mutable struct ParticleDat
     ncomp::Int64
     dtype::DataType
@@ -16,12 +19,19 @@ mutable struct ParticleDat
 end
 
 
+"""
+Create a container to store particle data, for use in ParticleDat, for a given
+compute target.
+"""
 function particle_data_buffer(dtype::DataType, shape::Tuple, compute_target::T) where (T<:KernelAbstractionsDevice)
     data = compute_target.ArrayType{dtype}(undef, shape)
     return data
 end
 
 
+"""
+Initialise the inner container that stores particle data.
+"""
 function init_particle_data(particle_dat)
     particle_dat.data = particle_data_buffer(
         particle_dat.dtype, (0, particle_dat.ncomp), particle_dat.compute_target
@@ -30,6 +40,10 @@ function init_particle_data(particle_dat)
 end
 
 
+"""
+Copy the contents of a container to a another. e.g. when storage for a
+container is reallocated.
+"""
 function copy_particle_data(dest, source, compute_target::T) where (T<:KernelAbstractionsDevice)
     
     size_d = size(dest)
@@ -48,7 +62,9 @@ function copy_particle_data(dest, source, compute_target::T) where (T<:KernelAbs
 end
 
 
-
+"""
+Ensure that the container in a ParticleDat can contain at least N particles.
+"""
 function grow_particle_dat(particle_dat, N)
     if (size(particle_dat.data)[1] >= N)
         return
@@ -63,6 +79,9 @@ function grow_particle_dat(particle_dat, N)
 end
 
 
+"""
+Append the passed data onto the ParticleDat.
+"""
 function append_particle_data(particle_dat, data)
     N, ncomp = size(data)
     if (ncomp != particle_dat.ncomp)

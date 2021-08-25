@@ -1,6 +1,9 @@
 export ParticleGroup, add_particles, remove_particles
 
 
+"""
+Add a ParticleDat to a ParticleGroup.
+"""
 function add_particle_dat(group, name, particle_dat)
     particle_dat.particle_group = group
     particle_dat.compute_target = group.compute_target
@@ -9,6 +12,12 @@ function add_particle_dat(group, name, particle_dat)
 end
 
 
+"""
+The ParticleGroup struct contains a collection of ParticleDat instances that
+define the properties of the particles in the ParticleGroup. One of these
+ParticleDats should have the ``position`` field set to ``true`` to indicate
+that that particular ParticleDat contains the positions of the particles.
+"""
 mutable struct ParticleGroup
     domain
     particle_dats::Dict
@@ -29,6 +38,13 @@ mutable struct ParticleGroup
 end
 
 
+"""
+Add new particles to a ParticleGroup instance. New particle data is passed as a
+Dict where the keys are the strings that name the destination ParticleDats and
+the values are Arrays of the appropriate size. i.e. The number of rows
+determines the number of new particles to be added and the number of columns
+should be equal to the number of components of the ParticleDat.
+"""
 function add_particles(group::ParticleGroup, particle_data::Dict)
     
     # Check data has consistent sizes.
@@ -65,6 +81,10 @@ function add_particles(group::ParticleGroup, particle_data::Dict)
 end
 
 
+"""
+Remove particles from the ParticleGroup. Indices should be an iterable
+containing the local indices of particles to be removed.
+"""
 function remove_particles(group::ParticleGroup, indices)
 
     npart_local = group.npart_local
@@ -80,13 +100,16 @@ function remove_particles(group::ParticleGroup, indices)
     new_npart_local = npart_local - N_remove
     @assert new_npart_local >= 0
     
+    # find the particles which we want to move into the newly vacated slots.
     to_move = filter(x->!(x in indices), range(new_npart_local+1, npart_local, step=1))
 
-    # find the indices which will be empty
+    # find the newly vacated indices which should be filled.
     filter!(x->x<new_npart_local, indices)
 
     @assert length(to_move) == length(indices)
     
+    # copy the particle data from the end of the particledat into the newly
+    # vacated slots.
     for dat in group.particle_dats
         for ix in zip(indices, to_move)
             dat.second.data[ix[1], :] = dat.second.data[ix[2], :]
