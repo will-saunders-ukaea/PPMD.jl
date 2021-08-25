@@ -44,6 +44,9 @@ Dict where the keys are the strings that name the destination ParticleDats and
 the values are Arrays of the appropriate size. i.e. The number of rows
 determines the number of new particles to be added and the number of columns
 should be equal to the number of components of the ParticleDat.
+
+This call should be collective across the domain communicator of the
+ParticleGroup.
 """
 function add_particles(group::ParticleGroup, particle_data::Dict)
     
@@ -84,6 +87,9 @@ end
 """
 Remove particles from the ParticleGroup. Indices should be an iterable
 containing the local indices of particles to be removed.
+
+This call should be collective across the domain communicator of the
+ParticleGroup.
 """
 function remove_particles(group::ParticleGroup, indices)
 
