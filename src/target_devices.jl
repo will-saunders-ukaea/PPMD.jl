@@ -23,7 +23,12 @@ struct KACUDADevice <: KernelAbstractionsDevice
     workgroup_size::Int64
     ArrayType
     function KACUDADevice(workgroup_size=32)
-        return new(CUDADevice(), workgroup_size, CuArray)
+        if CUDA.functional()
+            return new(CUDADevice(), workgroup_size, CuArray)
+        else
+            println("Warning CUDA.functional returned false, using CPU.")
+            return KACPU()
+        end
     end
 end
 
