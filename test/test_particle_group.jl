@@ -1,5 +1,7 @@
 using PPMD
 using Test
+using LinearAlgebra
+
 
 @testset "particle group" begin
 
@@ -40,21 +42,83 @@ using Test
     Pi = rand_within_extents(N, domain.extent)
     Bi = rand(Float64, (N, 3))
     Ai = reshape(range(1, N, step=1), (N, 1))
+    
+    N1 = 5
 
     add_particles(
         A,
         Dict(
-             "P" => Pi,
-             "B" => Bi,
-             "A" => Ai,
+             "P" => Pi[1:N1, :],
+             "B" => Bi[1:N1, :],
+             "A" => Ai[1:N1, :],
         )
     )
     
-    for px in 1:N
-        println(A["P"][px, 1])
+    # TODO change for MPI parallelism
+    @test A.npart_local == N1
+    for dx in ("P", "B", "A")
+        @test A[dx].npart_local == N1
+    end
+    
+    add_particles(
+        A,
+        Dict(
+             "P" => Pi[N1 + 1:N, :],
+             "B" => Bi[N1 + 1:N, :],
+             "A" => Ai[N1 + 1:N, :],
+        )
+    )
+
+    # TODO change for MPI parallelism
+    @test A.npart_local == N
+    for dx in ("P", "B", "A")
+        @test A[dx].npart_local == N
     end
 
 
+    for px in 1:N
+        orig_index = A["A"][px, 1]
+        @test norm(A["P"][px, :] - Pi[orig_index, :], Inf) == 0.0
+        @test norm(A["B"][px, :] - Bi[orig_index, :], Inf) == 0.0
+    end
+
+    
+    rm_count = 0
+    to_remove = (1, 3, 8)
+    for rx in to_remove
+        
+        remove_particles(A, (rx,))
+        rm_count += 1
+        # TODO change for MPI parallelism
+        @test A.npart_local == N - rm_count
+        N_remain = N - rm_count
+        for dx in ("P", "B", "A")
+            @test A[dx].npart_local == N_remain
+        end       
+
+        for px in 1:N_remain
+            orig_index = A["A"][px, 1]
+            @test norm(A["P"][px, :] - Pi[orig_index, :], Inf) == 0.0
+            @test norm(A["B"][px, :] - Bi[orig_index, :], Inf) == 0.0
+        end
+
+    end
 
 
 end
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
