@@ -25,6 +25,9 @@ mutable struct ParticleGroup
     npart_local::Int64
 
     position_dat::String
+    boundary_condition_task
+    position_to_rank_task
+
     function ParticleGroup(domain, particle_dats, compute_target=false)
         new_particle_group = new(domain, Dict(), compute_target, 0)
         
@@ -44,6 +47,15 @@ mutable struct ParticleGroup
                 new_particle_group.position_dat = datx.first
             end
         end
+        
+        new_particle_group.boundary_condition_task = get_boundary_condition_loop(
+            domain.boundary_condition,
+            new_particle_group
+        )
+
+        new_particle_group.position_to_rank_task = get_position_to_rank_loop(new_particle_group)
+
+
         return new_particle_group
     end
 end
