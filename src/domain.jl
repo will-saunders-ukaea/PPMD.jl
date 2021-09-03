@@ -1,4 +1,4 @@
-export FullyPeroidicBoundary, StructuredCartesianDomain
+export FullyPeroidicBoundary, StructuredCartesianDomain, get_boundary_condition_loop
 
 using MPI
 
@@ -61,3 +61,36 @@ mutable struct StructuredCartesianDomain <: Domain
         return new(bc, extent, ndim, comm)
     end
 end
+
+
+function get_boundary_condition_loop(boundary_condition::T, particle_group) where (T <: FullyPeroidicBoundary)
+    
+
+    position_dat = particle_group[particle_group.position_dat]
+    domain = particle_group.domain
+    extent = domain.extent
+    ndim = domain.ndim
+    
+    kernel_pbc = ""
+    for dx in 1:ndim
+        kernel_pbc *= "\nP[ix, $dx] = (P[ix, $dx] + ceil(abs(P[ix, $dx] / $(extent[dx]))) * $(extent[dx])) % $(extent[dx])"
+    end
+
+    loop = ParticleLoop(
+        particle_group.compute_target,
+        kernel_pbc,
+        Dict(
+            "P" => (position_dat, WRITE)
+        )
+    )
+
+    return loop
+end
+
+
+function global_move(particle_group)
+
+
+end
+
+

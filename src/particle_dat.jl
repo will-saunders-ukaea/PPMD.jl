@@ -1,5 +1,8 @@
 export ParticleDat, getindex
 
+using CUDA
+CUDA.allowscalar(true)
+
 
 """
 Struct to hold per particle properties. e.g. Positions, charge.
@@ -23,8 +26,15 @@ end
 Allow access to ParticleDats data using subscripts.
 """
 function Base.getindex(dat::ParticleDat, key...)
-    base_array = SubArray(dat.data, (1:dat.npart_local, 1:dat.ncomp))
-    return base_array[key...]
+
+    base_array = get_data_on_host(dat, dat.compute_target)
+    base_array = base_array[key...]
+    if typeof(base_array) <: SubArray
+        return convert(Array{dat.dtype}, base_array)
+    else
+        return base_array
+    end
+
 end
 
 

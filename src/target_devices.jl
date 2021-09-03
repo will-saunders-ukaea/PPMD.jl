@@ -33,3 +33,12 @@ struct KACUDADevice <: KernelAbstractionsDevice
 end
 
 
+function get_data_on_host(particle_dat, compute_target::T) where (T <: KACPU)
+    return SubArray(particle_dat.data, (1:particle_dat.npart_local, 1:particle_dat.ncomp))
+end
+
+
+function get_data_on_host(particle_dat, compute_target::T) where (T <: KACUDADevice)
+    host_data = convert(Array{particle_dat.dtype}, particle_dat.data)
+    return host_data[1:particle_dat.npart_local, 1:particle_dat.ncomp]
+end
