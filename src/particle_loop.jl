@@ -20,7 +20,7 @@ function ParticleLoop(
     @kernel function foo($kernel_args)
         ix = @index(Global)
         
-        $kernel
+        $(kernel.source)
 
     end
     """
@@ -46,8 +46,15 @@ function ParticleLoop(
         # kernels can be launched in parallel?
         wait(event)   
     end
+    
+    name = kernel.name * "_" * string(target) * "_ParticleLoop"
 
-    return loop_wrapper
+    l = Task(
+        name,
+        loop_wrapper
+    )
+
+    return l
 
 end
 

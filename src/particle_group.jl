@@ -27,6 +27,17 @@ mutable struct ParticleGroup
     position_dat::String
     function ParticleGroup(domain, particle_dats, compute_target=false)
         new_particle_group = new(domain, Dict(), compute_target, 0)
+        
+        # ParticleDats required intenally by the implementation
+        internal_dats = Dict(
+            #"_owning_rank" => ParticleDat(1, Cint),
+            # Theres a bug in CUDA.jl that prevents casting to Cint in the kernel
+            # https://githubmemory.com/repo/JuliaGPU/KernelAbstractions.jl/issues/254
+            "_owning_rank" => ParticleDat(1, Float64),
+        )
+
+        particle_dats = merge(particle_dats, internal_dats)
+
         for datx in particle_dats
             add_particle_dat(new_particle_group, datx.first, datx.second)
             if (datx.second.position)

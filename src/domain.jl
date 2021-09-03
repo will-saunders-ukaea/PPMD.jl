@@ -1,4 +1,4 @@
-export FullyPeroidicBoundary, StructuredCartesianDomain, get_boundary_condition_loop
+export FullyPeroidicBoundary, StructuredCartesianDomain, get_boundary_condition_loop, get_position_to_rank_loop, get_position_to_rank_kernel
 
 using MPI
 
@@ -63,8 +63,11 @@ mutable struct StructuredCartesianDomain <: Domain
 end
 
 
+"""
+Returns a ParticleLoop that applies periodic boundary conditions to the
+particle positions.
+"""
 function get_boundary_condition_loop(boundary_condition::T, particle_group) where (T <: FullyPeroidicBoundary)
-    
 
     position_dat = particle_group[particle_group.position_dat]
     domain = particle_group.domain
@@ -76,6 +79,11 @@ function get_boundary_condition_loop(boundary_condition::T, particle_group) wher
         kernel_pbc *= "\nP[ix, $dx] = (P[ix, $dx] + ceil(abs(P[ix, $dx] / $(extent[dx]))) * $(extent[dx])) % $(extent[dx])"
     end
 
+    kernel_pbc = Kernel(
+        "PBC_apply",
+        kernel_pbc
+    )
+
     loop = ParticleLoop(
         particle_group.compute_target,
         kernel_pbc,
@@ -86,6 +94,68 @@ function get_boundary_condition_loop(boundary_condition::T, particle_group) wher
 
     return loop
 end
+
+
+function get_position_to_rank_kernel(domain::T, position_dat, rank_dat) where (T <: StructuredCartesianDomain)
+
+    dims, periods, coords = MPI.Cart_get(domain.comm)
+    
+    src = ""
+    for dx in 1:domain.ndim
+        
+        cell_width_dx = domain.extent[dx] / dims[dx]
+        i_cell_width_dx = 1.0 / cell_width_dx
+    
+
+        src_dx = """
+        cell_$dx = trunc(P[ix, $dx] * $i_cell_width_dx)
+        """
+
+        src *= src_dx
+
+    end
+    
+    src  *= "\nlin_1 = cell_1"
+    for dx in 2:domain.ndim
+        src *= "\nlin_$dx = cell_$dx + $(dims[dx]) * lin_$(dx-1)"
+    end
+    src *= """\n
+    rank = lin_$(domain.ndim)
+    RANK[ix, 1] = rank
+    """
+
+    kernel = Kernel(
+        "StructuredCartesianPositionToRank",
+        src
+    )
+
+    dat_mapping = Dict(
+        "P" => (position_dat, READ),
+        "RANK" => (rank_dat, WRITE),
+    )
+
+    return kernel, dat_mapping
+
+end
+
+
+function get_position_to_rank_loop(particle_group)
+
+    kernel, dat_mapping = get_position_to_rank_kernel(
+        particle_group.domain,
+        particle_group[particle_group.position_dat],
+        particle_group["_owning_rank"]
+    )
+
+    loop = ParticleLoop(
+        particle_group.compute_target,
+        kernel,
+        dat_mapping
+    )
+
+    return loop
+end
+
 
 
 function global_move(particle_group)

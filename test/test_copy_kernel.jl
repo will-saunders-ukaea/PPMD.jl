@@ -35,11 +35,14 @@ using LinearAlgebra
     )
 
 
-    kernel_copy = """
+    kernel_copy = Kernel(
+        "copy_kernel",
+        """
         B[ix, 1] = A[ix, 1];
         B[ix, 2] = A[ix, 1] * 2.0;
         B[ix, 3] = A[ix, 1] * 3.0;
-    """
+        """
+   )
 
 
     loop = ParticleLoop(
