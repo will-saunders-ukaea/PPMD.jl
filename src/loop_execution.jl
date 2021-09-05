@@ -5,14 +5,15 @@ mutable struct Task
     execute
     call_count::Int64
     runtime::Float64
+    data::Dict
     function Task(name, func)
-        return new(name, func, 0, 0.0)
+        return new(name, func, 0, 0.0, Dict())
     end
 end
 
 
 function run_task(task)
-    
+
     if typeof(task) <: Task
         t = @elapsed begin
             task.execute()

@@ -1,4 +1,4 @@
-export FullyPeroidicBoundary, StructuredCartesianDomain, get_boundary_condition_loop, get_position_to_rank_loop, get_position_to_rank_kernel
+export FullyPeroidicBoundary, StructuredCartesianDomain, get_boundary_condition_loop, get_position_to_rank_loop, get_position_to_rank_kernel, global_move
 
 using MPI
 
@@ -13,7 +13,6 @@ abstract type Domain end
 struct FullyPeroidicBoundary <: BoundaryCondition
 
 end
-
 
 
 """
@@ -96,6 +95,9 @@ function get_boundary_condition_loop(boundary_condition::T, particle_group) wher
 end
 
 
+"""
+Return a kernel for a ParticleLoop that maps particle position to a MPI rank.
+"""
 function get_position_to_rank_kernel(domain::T, position_dat, rank_dat) where (T <: StructuredCartesianDomain)
 
     dims, periods, coords = MPI.Cart_get(domain.comm)
@@ -139,6 +141,9 @@ function get_position_to_rank_kernel(domain::T, position_dat, rank_dat) where (T
 end
 
 
+"""
+Return the ParticleLoop Task that when executed maps positions to MPI ranks.
+"""
 function get_position_to_rank_loop(particle_group)
 
     kernel, dat_mapping = get_position_to_rank_kernel(
@@ -158,8 +163,14 @@ end
 
 
 
+"""
+Send particles to correct owning rank. Is suitable for a global move.
+"""
 function global_move(particle_group)
+    initialise_particle_group_move(particle_group)
 
+    execute(particle_group.boundary_condition_task)
+    execute(particle_group.position_to_rank_task)
 
 end
 

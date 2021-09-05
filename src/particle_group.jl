@@ -1,4 +1,4 @@
-export ParticleGroup, add_particles, remove_particles, getindex
+export ParticleGroup, add_particles, remove_particles, getindex, initialise_particle_group_move
 
 
 """
@@ -23,13 +23,13 @@ mutable struct ParticleGroup
     particle_dats::Dict
     compute_target::Any
     npart_local::Int64
-
-    position_dat::String
     boundary_condition_task
     position_to_rank_task
 
+    position_dat::String
+
     function ParticleGroup(domain, particle_dats, compute_target=false)
-        new_particle_group = new(domain, Dict(), compute_target, 0)
+        new_particle_group = new(domain, Dict(), compute_target, 0, false, false)
         
         # ParticleDats required intenally by the implementation
         internal_dats = Dict(
@@ -38,26 +38,41 @@ mutable struct ParticleGroup
             # https://githubmemory.com/repo/JuliaGPU/KernelAbstractions.jl/issues/254
             "_owning_rank" => ParticleDat(1, Float64),
         )
-
         particle_dats = merge(particle_dats, internal_dats)
-
+        
+        # add the dats to the particle group
         for datx in particle_dats
             add_particle_dat(new_particle_group, datx.first, datx.second)
             if (datx.second.position)
                 new_particle_group.position_dat = datx.first
             end
         end
-        
-        new_particle_group.boundary_condition_task = get_boundary_condition_loop(
-            domain.boundary_condition,
-            new_particle_group
-        )
 
-        new_particle_group.position_to_rank_task = get_position_to_rank_loop(new_particle_group)
-
+        initialise_particle_group_move(new_particle_group)
 
         return new_particle_group
     end
+end
+
+
+"""
+Initialise PBC and position to rank on ParticleGroup
+"""
+function initialise_particle_group_move(particle_group::ParticleGroup, re_init=false)
+    
+    if ((typeof(particle_group.boundary_condition_task) == Bool) || re_init)
+        # Task to apply boundary condition to particles
+        particle_group.boundary_condition_task = get_boundary_condition_loop(
+            particle_group.domain.boundary_condition,
+            particle_group
+        )
+    end
+    
+    if ((typeof(particle_group.position_to_rank_task) == Bool) || re_init)
+        # Task that maps position to MPI rank
+        particle_group.position_to_rank_task = get_position_to_rank_loop(particle_group)
+    end
+
 end
 
 
