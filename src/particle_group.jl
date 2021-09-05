@@ -48,7 +48,7 @@ mutable struct ParticleGroup
             end
         end
 
-        initialise_particle_group_move(new_particle_group)
+        initialise_particle_group_move(new_particle_group, true)
 
         return new_particle_group
     end

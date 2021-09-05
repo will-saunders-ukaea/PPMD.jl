@@ -36,5 +36,9 @@ using LinearAlgebra
         )
     )
 
+    global_move(A)
+
+    display(A["_owning_rank"][:, :])
+
 
 end
