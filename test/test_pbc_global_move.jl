@@ -8,7 +8,7 @@ using LinearAlgebra
 
     target_device = spec
 
-    N = 100
+    N = 20
 
     extents = (2.0, 3.0, 4.0)
     boundary_condition = FullyPeroidicBoundary()
@@ -37,8 +37,6 @@ using LinearAlgebra
     )
 
     global_move(A)
-
-    display(A["_owning_rank"][:, :])
 
 
 end

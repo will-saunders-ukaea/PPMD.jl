@@ -163,15 +163,7 @@ end
 
 
 
-"""
-Send particles to correct owning rank. Is suitable for a global move.
-"""
-function global_move(particle_group)
 
-    execute(particle_group.boundary_condition_task)
-    execute(particle_group.position_to_rank_task)
-
-end
 
 
 
