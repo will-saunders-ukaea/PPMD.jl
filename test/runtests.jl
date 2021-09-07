@@ -7,4 +7,4 @@ include("test_pbc_apply.jl")
 include("test_pbc_global_add.jl")
 include("test_pbc_global_move.jl")
 include("test_pbc_pos_to_rank.jl")
-
+include("test_pbc_global_transfer.jl")
