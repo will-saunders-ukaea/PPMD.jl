@@ -1,4 +1,4 @@
-export ParticleGroup, add_particles, remove_particles, getindex, initialise_particle_group_move
+export ParticleGroup, add_particles, remove_particles, getindex, initialise_particle_group_move, global_transfer_to_rank
 
 using MPI
 using DataStructures

@@ -39,6 +39,21 @@ end
 
 
 """
+Pretty(ish) printing of ParticleDats
+"""
+function Base.show(io::IO, particle_dat::ParticleDat)
+    print(io, "npart_local: ", particle_dat.npart_local, "\n")
+    print(io, "dtype:       ", particle_dat.dtype, "\n")
+    print(io, "ncomp:       ", particle_dat.ncomp, "\n")
+    print(io, "target:      ", particle_dat.compute_target, "\n")
+    data = particle_dat[:,:]
+    for ix in 1:particle_dat.npart_local
+        print(io, data[ix, :], "\n")
+    end
+end
+
+
+"""
 Create a container to store particle data, for use in ParticleDat, for a given
 compute target.
 """
