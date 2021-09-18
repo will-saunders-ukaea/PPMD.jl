@@ -1,7 +1,7 @@
 module PPMD
 using MPI
 
-export ParticleLoop, READ, WRITE, KernelAbstractionsDevice, KACPU, KACUDADevice
+export ParticleLoop, KernelAbstractionsDevice, KACPU, KACUDADevice
 
 function __init__()
     if !(MPI.Initialized())
@@ -9,16 +9,16 @@ function __init__()
     end
 end
 
+include("access.jl")
 include("kernel.jl")
 include("loop_execution.jl")
 include("target_devices.jl")
-include("particle_loop.jl")
-include("access.jl")
-include("domain.jl")
 include("particle_group.jl")
 include("particle_dat.jl")
-include("utility.jl")
 include("global_array.jl")
+include("particle_loop.jl")
+include("domain.jl")
+include("utility.jl")
 
 
 

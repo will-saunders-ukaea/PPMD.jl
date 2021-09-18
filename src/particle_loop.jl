@@ -1,7 +1,29 @@
-
-
 using KernelAbstractions
 using FunctionWrappers: FunctionWrapper
+using DataStructures
+
+
+function make_args_sorted(args)
+    d = SortedDict{String, Tuple}(args)
+    return d
+end
+
+
+function get_wrapper_param(kernel_sym, dat::ParticleDat, access_mode, target)
+    return kernel_sym
+end
+
+function get_wrapper_param(kernel_sym, dat::GlobalArray, access_mode, target)
+    if (!access_mode.write)
+        return kernel_sym
+    end
+
+    if (access_mode == INC)
+        return "global_$kernel_sym"
+    end
+end
+
+
 
 
 function ParticleLoop(
@@ -9,15 +31,18 @@ function ParticleLoop(
     kernel,
     args
 )
-    # Assemble the kernel function args
-    kernel_args = join(keys(args), ',')
+    # ensure args have a consistent ordering
+    args = make_args_sorted(args)
+
+    # Assemble the kernel function parameters
+    kernel_params = join([get_wrapper_param(px.first, px.second[1], px.second[2], target) for px in args], ',')
     
     # TODO more complicated access, e.g. reductions should be 
     # constructed here
     
     # Assemble the kernel function
     kernel_func = """
-    @kernel function kernel_wapper($kernel_args)
+    @kernel function kernel_wapper($kernel_params)
         ix = @index(Global)
         
         $(kernel.source)

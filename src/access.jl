@@ -1,4 +1,4 @@
-
+export READ, WRITE, INC
 struct AccessType
     write::Bool
 end
@@ -10,5 +10,6 @@ READ = AccessType(false)
 "Access descriptor for write access"
 WRITE = AccessType(true)
 
-
+"Access descriptor for increment access"
+INC = AccessType(true)
 
