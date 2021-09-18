@@ -104,7 +104,7 @@ end
 
 function get_loop_args(N, kernel_sym, dat::GlobalArray, access_mode, target)
     if (!access_mode.write)
-        return data.data
+        return dat.data
     end
     if (access_mode == INC)
         ngroups = Int(ceil(N / target.workgroup_size))
@@ -120,7 +120,7 @@ end
 
 function post_loop(N, kernel_sym, dat::GlobalArray, access_mode, target, arg)
     if (!access_mode.write)
-        return data.data
+        return dat.data
     end
 
     println(arg[:,:])
