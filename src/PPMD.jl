@@ -18,6 +18,7 @@ include("domain.jl")
 include("particle_group.jl")
 include("particle_dat.jl")
 include("utility.jl")
+include("global_array.jl")
 
 
 

@@ -25,6 +25,8 @@ function ParticleLoop(
     end
     """
 
+    println(kernel_func)
+
     l = Task(
         kernel.name * "_" * string(target) * "_ParticleLoop",
         () -> return
@@ -40,10 +42,17 @@ function ParticleLoop(
     # Create the function which can be passed to execute
     # maybe this should be a struct that contains all the data and a function?
     function loop_wrapper()
-
         # call the loop itself
-        # TODO establish a robust method to hande the number of particles
-        N = first(values(args))[1].npart_local
+        
+        # Find the number of local particles
+        N = -1
+        for datx in values(args)
+            if (typeof(datx[1]) <: ParticleDat)
+                N = datx[1].npart_local
+                break
+            end
+        end
+        @assert N > -1
 
         # Assemble the args for the call.
         # TODO need a robust way to handle temporaries from reductions etc

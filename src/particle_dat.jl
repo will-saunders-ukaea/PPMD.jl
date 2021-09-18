@@ -27,7 +27,7 @@ Allow access to ParticleDats data using subscripts.
 """
 function Base.getindex(dat::ParticleDat, key...)
 
-    base_array = get_data_on_host(dat, dat.compute_target)
+    base_array = get_data_on_host(dat, dat.compute_target, (1:dat.npart_local, 1:dat.ncomp))
     base_array = base_array[key...]
     if typeof(base_array) <: SubArray
         return convert(Array{dat.dtype}, base_array)
@@ -138,3 +138,5 @@ function append_particle_data(particle_dat, data)
     particle_dat.npart_local = new_npart_local
     particle_dat.version_id += 1
 end
+
+
