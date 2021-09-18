@@ -35,16 +35,21 @@ function get_pre_kernel_launch(kernel_sym, dat::GlobalArray, access_mode, target
     end
 
     req_size = dat.ncomp * target.workgroup_size
+
     return """
-    @private $kernel_sym = zeros($(dat.dtype), ($(dat.ncomp),))
+    $kernel_sym = @private $(dat.dtype) ($(dat.ncomp),)
+    for _rx in 1:$(dat.ncomp)
+        @inbounds $kernel_sym[_rx] = 0
+    end
     _reduce_$kernel_sym = @localmem $(dat.dtype) $req_size
-        if (_local_ix == 1)
-            for _rx in 1:$req_size
-                @inbounds _reduce_$kernel_sym[_rx] = 0
-            end
+    if (_local_ix == 1)
+        for _rx in 1:$req_size
+            @inbounds _reduce_$kernel_sym[_rx] = 0
         end
+    end
     """
 end
+
 
 
 function get_post_kernel_launch(kernel_sym, dat::ParticleDat, access_mode, target)
@@ -73,6 +78,7 @@ function get_post_kernel_launch(kernel_sym, dat::GlobalArray, access_mode, targe
             end
             
             # write to the global data for this workgroup
+            # TODO investigate atomics for this
             for _rx in 1:$ncomp
                 _global_$kernel_sym[(_group_ix - 1) * $ncomp + _rx] = _reduce_$kernel_sym[_rx]
             end
@@ -122,8 +128,11 @@ function post_loop(N, kernel_sym, dat::GlobalArray, access_mode, target, arg)
     if (!access_mode.write)
         return dat.data
     end
-
-    println(arg[:,:])
+    
+    arg = sum(arg, dims=2)
+    host_data = get_array_on_host(arg)
+    reduce_result = MPI.Allreduce(view(host_data, 1:dat.ncomp),  MPI.SUM, dat.comm)
+    increment(dat, reduce_result)
 end
 
 
@@ -188,7 +197,6 @@ function ParticleLoop(
     loop_func = Base.invokelatest(ka_methods, target.device, target.workgroup_size)
 
     # Create the function which can be passed to execute
-    # maybe this should be a struct that contains all the data and a function?
     function loop_wrapper()
         # call the loop itself
         

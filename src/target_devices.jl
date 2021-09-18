@@ -33,6 +33,16 @@ struct KACUDADevice <: KernelAbstractionsDevice
 end
 
 
+function get_array_on_host(array::T) where T<: CuArray
+    return convert(Array{eltype(array)}, array)
+end
+
+
+function get_array_on_host(array::T) where T<: Array
+    return array
+end
+
+
 function get_data_on_host(dat, compute_target::T, shape) where (T <: KACPU)
     return SubArray(dat.data, shape)
 end

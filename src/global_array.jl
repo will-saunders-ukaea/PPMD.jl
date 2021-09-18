@@ -1,6 +1,7 @@
-export GlobalArray, getindex
+export GlobalArray, getindex, setindex, increment
 
 using CUDA
+using MPI
 CUDA.allowscalar(true)
 
 
@@ -12,11 +13,12 @@ mutable struct GlobalArray
     dtype::DataType
     compute_target::Any
     data::Any
-    function GlobalArray(ncomp::Int64, dtype::DataType, compute_target)
-        return new(ncomp, dtype, compute_target, compute_target.ArrayType{dtype}(undef, ncomp))
+    comm::MPI.Comm
+    function GlobalArray(ncomp::Int64, dtype::DataType, compute_target; comm=MPI.COMM_WORLD)
+        return new(ncomp, dtype, compute_target, compute_target.ArrayType{dtype}(undef, ncomp), comm)
     end
-    function GlobalArray(ncomp::Int64, compute_target)
-        return new(ncomp, Float64, compute_target, compute_target.ArrayType{Float64}(undef, ncomp))
+    function GlobalArray(ncomp::Int64, compute_target; comm=MPI.COMM_WORLD)
+        return new(ncomp, Float64, compute_target, compute_target.ArrayType{Float64}(undef, ncomp), comm)
     end
 end
 
@@ -35,3 +37,20 @@ function Base.getindex(dat::GlobalArray, key...)
     end
 
 end
+
+"""
+Allow writing to a GlobalArray
+"""
+function Base.setindex!(dat::GlobalArray, key, value)
+    dat.data[key] = value
+end
+
+
+"""
+Increment the values in the array by another array.
+"""
+function increment(dat::GlobalArray, value::Array)
+    dat.data[:] += dat.compute_target.ArrayType(value)
+end
+
+
