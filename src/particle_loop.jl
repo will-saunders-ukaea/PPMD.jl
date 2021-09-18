@@ -37,15 +37,28 @@ function ParticleLoop(
     # Assemble the kernel function parameters
     kernel_params = join([get_wrapper_param(px.first, px.second[1], px.second[2], target) for px in args], ',')
     
-    # TODO more complicated access, e.g. reductions should be 
-    # constructed here
+
+    pre_kernel_launch = join([get_wrapper_param(px.first, px.second[1], px.second[2], target) for px in args], "\n")
+
+
+    post_kernel_launch = ""
     
+    
+
     # Assemble the kernel function
     kernel_func = """
     @kernel function kernel_wapper($kernel_params)
+        _local_ix = @index(Local)
+        _group_ix = @index(Group)
         ix = @index(Global)
         
+        $pre_kernel_launch
+        
+        @inbounds begin
         $(kernel.source)
+        end
+
+        $post_kernel_launch
 
     end
     """
