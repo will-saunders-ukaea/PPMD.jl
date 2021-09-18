@@ -53,6 +53,10 @@ using LinearAlgebra
         )
     )
 
-    #execute(loop)
+    execute(loop)
+    
+    println(sum(A["A"][:, 1]))
+    
+
 
 end
