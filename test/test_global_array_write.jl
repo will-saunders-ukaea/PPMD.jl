@@ -28,7 +28,8 @@ using MPI
         A,
         Dict(
              "P" => rand_within_extents(N, domain.extent),
-             "A" => rand(Float64, (N, 1))
+             #"A" => rand(Float64, (N, 1))
+             "A" => reshape([1 for ix in 1:N], (N, 1)),
         )
     )
 
@@ -56,7 +57,8 @@ using MPI
     )
 
     execute(loop)
-    
+
+       
     host_reduce = MPI.Allreduce([sum(A["A"][:, 1]),], MPI.SUM, MPI.COMM_WORLD)
 
     @test abs(C[1] - host_reduce[1]) < 1E-13

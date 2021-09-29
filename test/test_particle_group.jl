@@ -78,8 +78,8 @@ using LinearAlgebra
 
     for px in 1:N
         orig_index = A["A"][px, 1]
-        @test norm(A["P"][px, :] - Pi[orig_index, :], Inf) == 0.0
-        @test norm(A["B"][px, :] - Bi[orig_index, :], Inf) == 0.0
+        @test norm(A["P"][px, :] - Pi[orig_index, :], Inf) <= 1E-15
+        @test norm(A["B"][px, :] - Bi[orig_index, :], Inf) <= 1E-15
     end
 
     
@@ -98,8 +98,8 @@ using LinearAlgebra
 
         for px in 1:N_remain
             orig_index = A["A"][px, 1]
-            @test norm(A["P"][px, :] - Pi[orig_index, :], Inf) == 0.0
-            @test norm(A["B"][px, :] - Bi[orig_index, :], Inf) == 0.0
+            @test norm(A["P"][px, :] - Pi[orig_index, :], Inf) <= 1E-15
+            @test norm(A["B"][px, :] - Bi[orig_index, :], Inf) <= 1E-15
         end
 
     end

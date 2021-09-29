@@ -15,10 +15,10 @@ mutable struct GlobalArray
     data::Any
     comm::MPI.Comm
     function GlobalArray(ncomp::Int64, dtype::DataType, compute_target; comm=MPI.COMM_WORLD)
-        return new(ncomp, dtype, compute_target, compute_target.ArrayType{dtype}(undef, ncomp), comm)
+        return new(ncomp, dtype, compute_target, device_zeros(compute_target, dtype, ncomp), comm)
     end
     function GlobalArray(ncomp::Int64, compute_target; comm=MPI.COMM_WORLD)
-        return new(ncomp, Float64, compute_target, compute_target.ArrayType{Float64}(undef, ncomp), comm)
+        return new(ncomp, Float64, compute_target, device_zeros(compute_target, Float64, ncomp), comm)
     end
 end
 

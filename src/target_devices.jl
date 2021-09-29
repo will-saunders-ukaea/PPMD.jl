@@ -52,3 +52,10 @@ function get_data_on_host(dat, compute_target::T, shape) where (T <: KACUDADevic
     host_data = convert(Array{dat.dtype}, dat.data)
     return host_data[shape...]
 end
+
+
+function device_zeros(compute_target, dtype, shape)
+    base = compute_target.ArrayType{dtype}(undef, shape)
+    base[:] .= 0
+    return base
+end
