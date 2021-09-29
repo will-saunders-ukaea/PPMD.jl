@@ -58,8 +58,8 @@ using LinearAlgebra
 
     execute(loop)
     
-    @test norm(A["A"].data[:]       - A["B"].data[:, 1], Inf) < 1E-14
-    @test norm(A["A"].data[:] * 2.0 - A["B"].data[:, 2], Inf) < 1E-14
-    @test norm(A["A"].data[:] * 3.0 - A["B"].data[:, 3], Inf) < 1E-14
+    @test norm(A["A"][:, 1]       - A["B"][:, 1], Inf) < 1E-14
+    @test norm(A["A"][:, 1] * 2.0 - A["B"][:, 2], Inf) < 1E-14
+    @test norm(A["A"][:, 1] * 3.0 - A["B"][:, 3], Inf) < 1E-14
 
 end

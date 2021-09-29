@@ -19,7 +19,7 @@ using LinearAlgebra
         domain,
         Dict(
              "P" => ParticleDat(3, position=true),
-             "B" => ParticleDat(3),
+             "PI" => ParticleDat(3),
              "A" => ParticleDat(1),
         ),
         target_device
@@ -37,7 +37,7 @@ using LinearAlgebra
         A,
         Dict(
              "P" => pmodified,
-             "A" => rand(Float64, (N, 1))
+             "PI" => pinitial,
         )
     )
 
@@ -45,6 +45,6 @@ using LinearAlgebra
 
     execute(loop)
 
-    @test norm(A["P"][:, :] .- pinitial[:, :], Inf) < 1E-14
+    @test norm(A["P"][:, :] .- A["PI"][:, :], Inf) < 1E-14
 
 end
