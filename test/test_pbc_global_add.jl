@@ -10,11 +10,26 @@ struct AA
 end
 
 
+function get_dim_bounds(domain::StructuredCartesianDomain, dim)
+    
+    dims, periods, coords = MPI.Cart_get(domain.comm)
+
+    width = domain.extent[dim] / dims[dim]
+
+    lower = coords[dim] * width
+    upper = lower + width
+
+    return lower, upper
+
+end
+
+
+
 @testset "PBC global add $spec" for spec in (KACPU(), KACUDADevice())
 
     target_device = spec
 
-    N = 1
+    N = 100
 
     extents = (2.0, 3.0, 4.0)
     boundary_condition = FullyPeroidicBoundary()
@@ -32,8 +47,13 @@ end
 
     pinitial = rand_within_extents(N, domain.extent)
     ptest = rand_within_extents(N, domain.extent)
-
-
+    
+    comm = domain.comm
+    rank = MPI.Comm_rank(comm)
+    size = MPI.Comm_size(comm)
+    
+    # randomly add particles on each rank that will need sending to the 
+    # correct owning rank
     add_particles(
         A,
         Dict(
@@ -42,13 +62,14 @@ end
         )
     )
     
-    #initialise_particle_group_move(A)
+    npart_total = MPI.Allreduce(A.npart_local, MPI.SUM, comm)
+    @assert npart_total == N * size
     
-    global_move(A)
-
-    #execute(A.boundary_condition_task)
-    
-    #aa = AA(get_boundary_condition_loop(A.domain.boundary_condition, A))
+    for dx in 1:domain.ndim
+        lower, upper = get_dim_bounds(domain, dx)
+        @test maximum(lower .- A["P"][:, dx]) <= 0
+        @test minimum(A["P"][:, dx] .- upper) <= 0
+    end
 
 
 end

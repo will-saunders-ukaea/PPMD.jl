@@ -101,39 +101,45 @@ should be equal to the number of components of the ParticleDat.
 This call should be collective across the domain communicator of the
 ParticleGroup.
 """
-function add_particles(group::ParticleGroup, particle_data::Dict)
-    
-    # Check data has consistent sizes.
-    N = -1
-    for dx in particle_data
-        nprop, ncomp = size(dx.second)
-        if (N < 0)
-            N = nprop
-        elseif (N != nprop)
-            error("Data to initialise particles with has inconsistent numbers of rows.")
+function add_particles(group::ParticleGroup, particle_data::Dict=Dict())
+
+    if (!isempty(particle_data))
+        # Check data has consistent sizes.
+        N = -1
+        for dx in particle_data
+            nprop, ncomp = size(dx.second)
+            if (N < 0)
+                N = nprop
+            elseif (N != nprop)
+                error("Data to initialise particles with has inconsistent numbers of rows.")
+            end
+            
+            if (group.particle_dats[dx.first].ncomp != ncomp) 
+                error("Data to initialise ParticleDat $dx.first has incorrect number of components.")
+            end
+
         end
         
-        if (group.particle_dats[dx.first].ncomp != ncomp) 
-            error("Data to initialise ParticleDat $dx.first has incorrect number of components.")
-        end
+        group.npart_local += N
+        for dx in group.particle_dats
+            dat = dx.second
 
+            # expand the particle dat storage to allocate space for the new
+            # particles
+            grow_particle_dat(dat, N + size(dat.data)[1])
+            if (dx.first in keys(particle_data))
+                new_data = particle_data[dx.first]
+            else
+                new_data = zeros(dat.dtype, (N, dat.ncomp))
+            end
+            append_particle_data(dat, new_data)
+            @assert dat.npart_local == group.npart_local
+        end
     end
     
-    group.npart_local += N
-    for dx in group.particle_dats
-        dat = dx.second
-
-        # expand the particle dat storage to allocate space for the new
-        # particles
-        grow_particle_dat(dat, N + size(dat.data)[1])
-        if (dx.first in keys(particle_data))
-            new_data = particle_data[dx.first]
-        else
-            new_data = zeros(dat.dtype, (N, dat.ncomp))
-        end
-        append_particle_data(dat, new_data)
-        @assert dat.npart_local == group.npart_local
-    end
+    # Move added particles to the correct owning rank
+    # This is why add_particles is collective over the particle group
+    global_move(group)
 
 end
 
