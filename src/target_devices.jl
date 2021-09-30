@@ -2,6 +2,7 @@
 using KernelAbstractions
 using CUDA
 using CUDAKernels
+using MPI
 
 
 "Base type for targets built on top of KernelAbstractions"
@@ -24,6 +25,8 @@ struct KACUDADevice <: KernelAbstractionsDevice
     ArrayType
     function KACUDADevice(workgroup_size=32)
         if CUDA.functional()
+            # set the device round robin on local mpi rank
+            CUDA.device!(LOCAL_RANK % length(CUDA.devices()))
             return new(CUDADevice(), workgroup_size, CuArray)
         else
             println("Warning CUDA.functional returned false, using CPU.")
