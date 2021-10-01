@@ -3,32 +3,48 @@ using FunctionWrappers: FunctionWrapper
 using DataStructures
 
 
+function flatten(c)
+    return collect(Iterators.flatten(c))
+end
+
+
+function flatten_join(c, delimiter)
+    return join(
+        flatten(c),
+        delimiter
+    )
+end
+
+
 function make_args_sorted(args)
     d = SortedDict{String, Tuple}(args)
     return d
 end
 
 
+"""
+Construct the parameters for the kernel function
+"""
 function get_wrapper_param(kernel_sym, dat::ParticleDat, access_mode, target)
-    return kernel_sym
+    return (kernel_sym,)
 end
-
 function get_wrapper_param(kernel_sym, dat::GlobalArray, access_mode, target)
     if (!access_mode.write)
-        return kernel_sym
+        return (kernel_sym,)
     end
 
     if (access_mode == INC)
-        return "_global_$kernel_sym"
+        return ("_global_$kernel_sym",)
     end
 end
 
 
+"""
+Generate code for the data structure and access type prior to the kernel launch 
+"""
 function get_pre_kernel_launch(kernel_sym, dat::ParticleDat, access_mode, target)
     return ""
 end
-
-
 function get_pre_kernel_launch(kernel_sym, dat::GlobalArray, access_mode, target)
     if (!access_mode.write)
         return ""
@@ -51,12 +67,12 @@ function get_pre_kernel_launch(kernel_sym, dat::GlobalArray, access_mode, target
 end
 
 
-
+"""
+Generate code for the data structure and access post kernel launch
+"""
 function get_post_kernel_launch(kernel_sym, dat::ParticleDat, access_mode, target)
     return ""
 end
-
-
 function get_post_kernel_launch(kernel_sym, dat::GlobalArray, access_mode, target)
     if (!access_mode.write)
         return ""
@@ -89,11 +105,13 @@ function get_post_kernel_launch(kernel_sym, dat::GlobalArray, access_mode, targe
 end
 
 
+"""
+Establish if this data structure and access combination require a sync before
+the kernel is launched.
+"""
 function get_pre_kernel_sync(kernel_sym, dat::ParticleDat, access_mode, target)
     return false
 end
-
-
 function get_pre_kernel_sync(kernel_sym, dat::GlobalArray, access_mode, target)
     if (!access_mode.write)
         return false
@@ -103,27 +121,32 @@ function get_pre_kernel_sync(kernel_sym, dat::GlobalArray, access_mode, target)
 end
 
 
+"""
+Get the calling arguments for the data structure and access mode. This may 
+also handle any communication required before the loop launches. e.g.
+halo exchanges.
+"""
 function get_loop_args(N, kernel_sym, dat::ParticleDat, access_mode, target)
-    return dat.data
+    return (dat.data,)
 end
-
-
 function get_loop_args(N, kernel_sym, dat::GlobalArray, access_mode, target)
     if (!access_mode.write)
-        return dat.data
+        return (dat.data,)
     end
     if (access_mode == INC)
         ngroups = Int(ceil(N / target.workgroup_size))
     end
-    return target.ArrayType{dat.dtype}(undef, (dat.ncomp, ngroups))
+    return (target.ArrayType{dat.dtype}(undef, (dat.ncomp, ngroups)),)
 end
 
 
+"""
+After a loop has completed perform actions for each data structure and access
+type, e.g. reduction operations.
+"""
 function post_loop(N, kernel_sym, dat::ParticleDat, access_mode, target, arg)
     return
 end
-
-
 function post_loop(N, kernel_sym, dat::GlobalArray, access_mode, target, arg)
     if (!access_mode.write)
         return dat.data
@@ -145,7 +168,7 @@ function ParticleLoop(
     args = make_args_sorted(args)
 
     # Assemble the kernel function parameters
-    kernel_params = join(
+    kernel_params = flatten_join(
         [get_wrapper_param(px.first, px.second[1], px.second[2], target) for px in args],
         ','
     )
@@ -211,7 +234,7 @@ function ParticleLoop(
         @assert N > -1
 
         # Assemble the args for the call.
-        call_args = [get_loop_args(N, px.first, px.second[1], px.second[2], target) for px in args]
+        call_args = flatten([get_loop_args(N, px.first, px.second[1], px.second[2], target) for px in args])
 
         event = loop_func(call_args..., ndrange=N)
  
