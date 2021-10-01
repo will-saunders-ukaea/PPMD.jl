@@ -159,6 +159,55 @@ function post_loop(N, kernel_sym, dat::GlobalArray, access_mode, target, arg)
 end
 
 
+"""
+Julia does not seem to natively support atomic
+    
+    old = a[i]
+    a[i] += b
+
+at the moment (CUDA.jl does with "old = CUDA.atomic_add!(pointer(a, i), b)).
+Here we construct an atomic function for use in kernels that fills the gap on
+the host. The kernel should be written with
+
+    old = ATOMIC_ADD(a, ix, b)
+
+to indicate the atomic add.
+"""
+function cuda_atomic_add(a, ix, b)
+    return CUDA.atomic_add!(pointer(a, i), b)
+end
+function cpu_atomic_add(a::Array{Int64}, ix::Int64, b::Int64)
+    old = Base.Threads.llvmcall(
+        "%ptr = inttoptr i64 %0 to i64*\n%rv = atomicrmw add i64* %ptr, i64 %1 acq_rel\nret i64 %rv\n",
+        Int64, Tuple{Ptr{Int64},Int64}, pointer(a, ix), b
+    )
+    return old
+
+    #julia_type = eltype(a)
+    #@assert (julia_type <: Int64) || (julia_type <: Float64)
+    #
+    #if julia_type == Int64
+    #    old = Base.Threads.llvmcall(
+    #        "%ptr = inttoptr i64 %0 to i64*\n%rv = atomicrmw add i64* %ptr, i64 %1 acq_rel\nret i64 %rv\n",
+    #        Int64, Tuple{Ptr{Int64},Int64}, pointer(a, ix), b
+    #    )
+    #else 
+    #    old = Base.Threads.llvmcall(
+    #        "%ptr = inttoptr i64 %0 to i64*\n%rv = atomicrmw add i64* %ptr, f64 %1 acq_rel\nret f64 %rv\n",
+    #        Float64, Tuple{Ptr{Float64}, Float64}, pointer(a, ix), b
+    #    )
+    #end
+
+    #return old
+end
+function get_atomic_add(target::KACUDADevice)
+    return "cuda_atomic_add"
+end
+function get_atomic_add(target::KACPU)
+    @assert sizeof(Cptrdiff_t) == 8
+    return "cpu_atomic_add"
+end
+
 function ParticleLoop(
     target,
     kernel,
@@ -192,6 +241,8 @@ function ParticleLoop(
     # Assemble the kernel function
     kernel_func = """
     @kernel function kernel_wapper($kernel_params)
+        ATOMIC_ADD = $(get_atomic_add(target))
+
         _local_ix = @index(Local)
         _group_ix = @index(Group)
         ix = @index(Global)
