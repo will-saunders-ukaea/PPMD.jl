@@ -174,7 +174,7 @@ the host. The kernel should be written with
 to indicate the atomic add.
 """
 function cuda_atomic_add(a, ix, b)
-    return CUDA.atomic_add!(pointer(a, i), b)
+    return CUDA.atomic_add!(pointer(a, ix), b)
 end
 function cpu_atomic_add(a::Array{Int64}, ix::Int64, b::Int64)
     old = Base.Threads.llvmcall(
