@@ -1,4 +1,4 @@
-export rand_within_extents
+export rand_within_extents, get_subdomain_bounds
 
 using Random
 
@@ -17,3 +17,20 @@ function rand_within_extents(N::Int64, extent, rng=MersenneTwister())
     return output
 end
 
+
+"""
+Get the upper and lower boundary of the owned subdomain of a
+StructuredCartesianDomain.
+"""
+function get_subdomain_bounds(domain::StructuredCartesianDomain, dim)
+    
+    dims, periods, coords = MPI.Cart_get(domain.comm)
+
+    width = domain.extent[dim] / dims[dim]
+
+    lower = coords[dim] * width
+    upper = lower + width
+
+    return lower, upper
+
+end

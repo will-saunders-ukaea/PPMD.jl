@@ -38,6 +38,8 @@ include("particle_loop.jl")
 include("domain.jl")
 include("utility.jl")
 
+include("mesh.jl")
+include("cell_dat.jl")
 
 
 end # module

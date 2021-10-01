@@ -4,27 +4,6 @@ using Test
 using LinearAlgebra
 
 
-
-struct AA
-    boundary_condition_task
-end
-
-
-function get_dim_bounds(domain::StructuredCartesianDomain, dim)
-    
-    dims, periods, coords = MPI.Cart_get(domain.comm)
-
-    width = domain.extent[dim] / dims[dim]
-
-    lower = coords[dim] * width
-    upper = lower + width
-
-    return lower, upper
-
-end
-
-
-
 @testset "PBC global add $spec" for spec in (KACPU(), KACUDADevice())
 
     target_device = spec
@@ -66,7 +45,7 @@ end
     @assert npart_total == N * size
     
     for dx in 1:domain.ndim
-        lower, upper = get_dim_bounds(domain, dx)
+        lower, upper = get_subdomain_bounds(domain, dx)
         @test maximum(lower .- A["P"][:, dx]) <= 0
         @test minimum(A["P"][:, dx] .- upper) <= 0
     end

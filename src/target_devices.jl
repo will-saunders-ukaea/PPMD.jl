@@ -57,8 +57,11 @@ function get_data_on_host(dat, compute_target::T, shape) where (T <: KACUDADevic
 end
 
 
-function device_zeros(compute_target, dtype, shape)
-    base = compute_target.ArrayType{dtype}(undef, shape)
-    base[:] .= 0
-    return base
+function device_zeros(compute_target::T, dtype, shape) where (T <: KACPU)
+    return zeros(dtype, shape)
+end
+
+
+function device_zeros(compute_target::T, dtype, shape) where (T <: KACUDADevice)
+    return CUDA.zeros(dtype, shape)
 end
