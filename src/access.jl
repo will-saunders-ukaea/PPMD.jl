@@ -1,4 +1,4 @@
-export READ, WRITE, INC
+export READ, WRITE, INC, DirectAccess
 struct AccessType
     write::Bool
 end
@@ -12,4 +12,9 @@ WRITE = AccessType(true)
 
 "Access descriptor for increment access"
 INC = AccessType(true)
+
+
+struct DirectAccess
+    dat
+end
 

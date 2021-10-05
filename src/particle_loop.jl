@@ -28,6 +28,9 @@ Construct the parameters for the kernel function
 function get_wrapper_param(kernel_sym, dat::ParticleDat, access_mode, target)
     return (kernel_sym,)
 end
+function get_wrapper_param(kernel_sym, dat::DirectAccess, access_mode, target)
+    return (kernel_sym,)
+end
 function get_wrapper_param(kernel_sym, dat::GlobalArray, access_mode, target)
     if (!access_mode.write)
         return (kernel_sym,)
@@ -43,6 +46,9 @@ end
 Generate code for the data structure and access type prior to the kernel launch 
 """
 function get_pre_kernel_launch(kernel_sym, dat::ParticleDat, access_mode, target)
+    return ""
+end
+function get_pre_kernel_launch(kernel_sym, dat::DirectAccess, access_mode, target)
     return ""
 end
 function get_pre_kernel_launch(kernel_sym, dat::GlobalArray, access_mode, target)
@@ -71,6 +77,9 @@ end
 Generate code for the data structure and access post kernel launch
 """
 function get_post_kernel_launch(kernel_sym, dat::ParticleDat, access_mode, target)
+    return ""
+end
+function get_post_kernel_launch(kernel_sym, dat::DirectAccess, access_mode, target)
     return ""
 end
 function get_post_kernel_launch(kernel_sym, dat::GlobalArray, access_mode, target)
@@ -112,6 +121,9 @@ the kernel is launched.
 function get_pre_kernel_sync(kernel_sym, dat::ParticleDat, access_mode, target)
     return false
 end
+function get_pre_kernel_sync(kernel_sym, dat::DirectAccess, access_mode, target)
+    return false
+end
 function get_pre_kernel_sync(kernel_sym, dat::GlobalArray, access_mode, target)
     if (!access_mode.write)
         return false
@@ -129,6 +141,9 @@ halo exchanges.
 function get_loop_args(N, kernel_sym, dat::ParticleDat, access_mode, target)
     return (dat.data,)
 end
+function get_loop_args(N, kernel_sym, dat::DirectAccess, access_mode, target)
+    return (dat.dat.data,)
+end
 function get_loop_args(N, kernel_sym, dat::GlobalArray, access_mode, target)
     if (!access_mode.write)
         return (dat.data,)
@@ -145,6 +160,9 @@ After a loop has completed perform actions for each data structure and access
 type, e.g. reduction operations.
 """
 function post_loop(N, kernel_sym, dat::ParticleDat, access_mode, target, arg)
+    return
+end
+function post_loop(N, kernel_sym, dat::DirectAccess, access_mode, target, arg)
     return
 end
 function post_loop(N, kernel_sym, dat::GlobalArray, access_mode, target, arg)

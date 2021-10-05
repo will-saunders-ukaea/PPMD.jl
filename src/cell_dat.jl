@@ -1,5 +1,7 @@
-export CellDat, resize_cell_dat
+export CellDat, resize_cell_dat, getindex, setindex
 
+using CUDA
+CUDA.allowscalar(true)
 
 mutable struct CellDat
     mesh
@@ -42,3 +44,29 @@ function resize_cell_dat(cell_dat)
     end
 
 end
+
+
+"""
+Allow writing to a CellDat
+"""
+function Base.setindex!(dat::CellDat, key, value)
+    CUDA.@allowscalar dat.data[key] = value
+end
+
+
+"""
+Allow access to CellDat data using subscripts.
+"""
+function Base.getindex(dat::CellDat, key...)
+
+    base_array = get_data_on_host(dat, dat.compute_target, (1:length(dat.data),))
+    base_array = base_array[key...]
+    if typeof(base_array) <: SubArray
+        return convert(Array{dat.dtype}, base_array)
+    else
+        return base_array
+    end
+
+end
+
+
