@@ -1,6 +1,4 @@
-export MinimalWidthCartesianMesh
-
-
+export MinimalWidthCartesianMesh, mesh_hash
 
 
 mutable struct MinimalWidthCartesianMesh
@@ -8,6 +6,7 @@ mutable struct MinimalWidthCartesianMesh
     min_width
     cell_dim
     cell_count
+    hash
     function MinimalWidthCartesianMesh(domain, min_width)
         
         cell_dim = [0 for ix in 1:domain.ndim]
@@ -18,14 +17,20 @@ mutable struct MinimalWidthCartesianMesh
             @assert ncells > 0
             cell_dim[dx] = ncells
         end
-        
         cell_count = reduce(*, cell_dim)
+        
+        new_mesh = new(domain, min_width, cell_dim, cell_count)
+        
+        hash = "$(typeof(new_mesh))_" * hash_primitive_type(min_width)
+        new_mesh.hash = hash
 
-        return new(domain, min_width, cell_dim, cell_count)
+        return new_mesh
     end
 
 end
 
 
+function mesh_hash(mesh)
 
+end
 

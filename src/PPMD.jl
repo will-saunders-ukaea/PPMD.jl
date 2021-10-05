@@ -26,7 +26,7 @@ end
 
 LOCAL_RANK = get_local_rank()
 
-
+include("hash.jl")
 include("access.jl")
 include("kernel.jl")
 include("loop_execution.jl")
