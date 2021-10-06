@@ -28,9 +28,6 @@ CUDA.allowscalar(true)
 
     mesh = MinimalWidthCartesianMesh(domain, 1.0)
 
-    cell_npart = CellDat(mesh, 1, Int64, target_device)
-    cell_children = CellDat(mesh, cell_npart, Int64, target_device)
-
     add_particles(
         A,
         Dict(
