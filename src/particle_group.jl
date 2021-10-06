@@ -1,4 +1,4 @@
-export ParticleGroup, add_particles, remove_particles, getindex, initialise_particle_group_move, global_transfer_to_rank
+export ParticleGroup, add_particles, remove_particles, getindex, initialise_particle_group_move, global_transfer_to_rank, add_particle_dat
 
 using MPI
 using DataStructures
@@ -12,6 +12,8 @@ function add_particle_dat(group, name, particle_dat)
     particle_dat.compute_target = group.compute_target
     group.particle_dats[name] = particle_dat
     init_particle_data(particle_dat)
+    grow_particle_dat(particle_dat, group.npart_local)
+    particle_dat.npart_local = group.npart_local
 end
 
 
