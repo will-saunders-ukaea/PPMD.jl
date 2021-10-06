@@ -28,7 +28,7 @@ Construct the parameters for the kernel function
 function get_wrapper_param(kernel_sym, dat::ParticleDat, access_mode, target)
     return (kernel_sym,)
 end
-function get_wrapper_param(kernel_sym, dat::DirectAccess, access_mode, target)
+function get_wrapper_param(kernel_sym, dat::T, access_mode, target) where T<: DirectAccessT
     return (kernel_sym,)
 end
 function get_wrapper_param(kernel_sym, dat::GlobalArray, access_mode, target)
@@ -48,7 +48,7 @@ Generate code for the data structure and access type prior to the kernel launch
 function get_pre_kernel_launch(kernel_sym, dat::ParticleDat, access_mode, target)
     return ""
 end
-function get_pre_kernel_launch(kernel_sym, dat::DirectAccess, access_mode, target)
+function get_pre_kernel_launch(kernel_sym, dat::T, access_mode, target) where T<: DirectAccessT
     return ""
 end
 function get_pre_kernel_launch(kernel_sym, dat::GlobalArray, access_mode, target)
@@ -79,7 +79,7 @@ Generate code for the data structure and access post kernel launch
 function get_post_kernel_launch(kernel_sym, dat::ParticleDat, access_mode, target)
     return ""
 end
-function get_post_kernel_launch(kernel_sym, dat::DirectAccess, access_mode, target)
+function get_post_kernel_launch(kernel_sym, dat::T, access_mode, target) where T<: DirectAccessT
     return ""
 end
 function get_post_kernel_launch(kernel_sym, dat::GlobalArray, access_mode, target)
@@ -121,7 +121,7 @@ the kernel is launched.
 function get_pre_kernel_sync(kernel_sym, dat::ParticleDat, access_mode, target)
     return false
 end
-function get_pre_kernel_sync(kernel_sym, dat::DirectAccess, access_mode, target)
+function get_pre_kernel_sync(kernel_sym, dat::T, access_mode, target) where T<: DirectAccessT
     return false
 end
 function get_pre_kernel_sync(kernel_sym, dat::GlobalArray, access_mode, target)
@@ -141,7 +141,7 @@ halo exchanges.
 function get_loop_args(N, kernel_sym, dat::ParticleDat, access_mode, target)
     return (dat.data,)
 end
-function get_loop_args(N, kernel_sym, dat::DirectAccess, access_mode, target)
+function get_loop_args(N, kernel_sym, dat::T, access_mode, target) where T<: DirectAccessT
     return (dat.dat.data,)
 end
 function get_loop_args(N, kernel_sym, dat::GlobalArray, access_mode, target)
@@ -162,7 +162,7 @@ type, e.g. reduction operations.
 function post_loop(N, kernel_sym, dat::ParticleDat, access_mode, target, arg)
     return
 end
-function post_loop(N, kernel_sym, dat::DirectAccess, access_mode, target, arg)
+function post_loop(N, kernel_sym, dat::T, access_mode, target, arg) where T<: DirectAccessT
     return
 end
 function post_loop(N, kernel_sym, dat::GlobalArray, access_mode, target, arg)
@@ -264,6 +264,7 @@ function ParticleLoop(
         _local_ix = @index(Local)
         _group_ix = @index(Group)
         ix = @index(Global)
+        _LOCAL_RANK_INDEX = ix
         
         $pre_kernel_launch
         $pre_kernel_sync

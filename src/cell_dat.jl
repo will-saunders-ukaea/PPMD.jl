@@ -27,6 +27,11 @@ mutable struct CellDat
 end
 
 
+"""
+Resize a CellDat to allocate sufficient storage for the current value of ncomp.
+This is used when the number of components (ncomp) is itself a CellDat and
+hence the number of required components is variable.
+"""
 function resize_cell_dat(cell_dat)
     
     ncomp = cell_dat.ncomp

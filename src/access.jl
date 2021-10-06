@@ -1,4 +1,4 @@
-export READ, WRITE, INC, DirectAccess
+export READ, WRITE, INC, DirectAccessT, DirectArray, DirectAccess
 struct AccessType
     write::Bool
 end
@@ -14,7 +14,25 @@ WRITE = AccessType(true)
 INC = AccessType(true)
 
 
-struct DirectAccess
+abstract type DirectAccessT end
+
+struct DirectAccess <: DirectAccessT
     dat
+end
+
+
+struct DataWrapper
+    data
+    function DataWrapper(array, compute_target)
+        return new(convert(compute_target.ArrayType, array))
+    end
+end
+
+
+struct DirectArray <: DirectAccessT
+    dat
+    function DirectArray(array, compute_target)
+        return new(DataWrapper(array, compute_target))
+    end
 end
 
