@@ -1,6 +1,9 @@
 export cellid_particle_dat_name, cellid_particle_dat, layer_particle_dat_name, layer_particle_dat, CellToParticleMap, assemble_cell_to_particle_map
 
 
+using CUDA
+
+
 """
 Get the ParticleDat that corresponds to a given name in a ParticleGroup.
 Creates the ParticleDat if it does not exist. Checks the number of components
@@ -66,7 +69,7 @@ function assemble_cell_to_particle_map(map)
 
     execute(map.loop_layer)
     resize_cell_dat(map.cell_children)
-    map.layer_stride.dat.data[1] = map.cell_children.stride
+    CUDA.@allowscalar map.layer_stride.dat.data[1] = map.cell_children.stride
     execute(map.loop_assemble)
 
 end
