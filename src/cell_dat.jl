@@ -49,8 +49,8 @@ end
 """
 Allow writing to a CellDat
 """
-function Base.setindex!(dat::CellDat, key, value)
-    CUDA.@allowscalar dat.data[key] = value
+function Base.setindex!(dat::CellDat, value, key...)
+    CUDA.@allowscalar dat.data[key...] = value
 end
 
 

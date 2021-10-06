@@ -1,4 +1,4 @@
-export ParticleDat, getindex
+export ParticleDat, getindex, setindex
 
 using CUDA
 CUDA.allowscalar(true)
@@ -26,7 +26,6 @@ end
 Allow access to ParticleDats data using subscripts.
 """
 function Base.getindex(dat::ParticleDat, key...)
-
     base_array = get_data_on_host(dat, dat.compute_target, (1:dat.npart_local, 1:dat.ncomp))
     base_array = base_array[key...]
     if typeof(base_array) <: SubArray
@@ -35,6 +34,15 @@ function Base.getindex(dat::ParticleDat, key...)
         return base_array
     end
 
+end
+
+
+"""
+Allow writing data to a ParticleDat
+"""
+function Base.setindex!(dat::ParticleDat, value, key...)
+    dat.data[key...] = value
+    dat.version_id += 1
 end
 
 

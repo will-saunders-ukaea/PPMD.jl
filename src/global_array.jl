@@ -41,8 +41,8 @@ end
 """
 Allow writing to a GlobalArray
 """
-function Base.setindex!(dat::GlobalArray, key, value)
-    dat.data[key] = value
+function Base.setindex!(dat::GlobalArray, value, key...)
+    CUDA.@allowscalar dat.data[key...] = value
 end
 
 
