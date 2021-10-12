@@ -90,8 +90,8 @@ mutable struct CellToParticleMap
     function CellToParticleMap(mesh, particle_group)
         compute_target = particle_group.compute_target
         new_map = new(mesh, particle_group)
-        new_map.cell_npart = CellDat(mesh, 1, Int64, compute_target)
-        new_map.cell_children = CellDat(mesh, new_map.cell_npart, Int64, compute_target)
+        new_map.cell_npart = CellDat(mesh, (1,), Int64, compute_target)
+        new_map.cell_children = CellDat(mesh, (new_map.cell_npart,), Int64, compute_target)
 
         # creates the cellid ParticleDat
         cellid = cellid_particle_dat(particle_group, mesh)

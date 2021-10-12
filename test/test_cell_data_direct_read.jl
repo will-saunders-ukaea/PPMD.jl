@@ -31,7 +31,7 @@ using MPI
     )
 
     mesh = MinimalWidthCartesianMesh(domain, 0.1)
-    C = CellDat(mesh, 1, Int64, target_device)
+    C = CellDat(mesh, (1,), Int64, target_device)
     cdata = [ix for ix in 1:6]
     C[1:6] = cdata
 
