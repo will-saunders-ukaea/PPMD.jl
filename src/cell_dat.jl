@@ -10,6 +10,7 @@ mutable struct CellDat
     compute_target
     data
     stride
+    ncomp_first_max
     function CellDat(mesh, ncomp, dtype, compute_target)
         
         @assert typeof(ncomp) <: Tuple
@@ -17,16 +18,30 @@ mutable struct CellDat
         if (typeof(ncomp[1]) == CellDat)
             @assert ncomp[1].mesh == mesh
             _ncomp = 0
+            _ncomp_first_max = 0
         else
             _ncomp = ncomp
+            _ncomp_first_max = ncomp[1]
         end
 
         required_length = (_ncomp..., mesh.cell_count,)
         stride = reduce(*, _ncomp)
         data = device_zeros(compute_target, dtype, required_length)
 
-        return new(mesh, ncomp, dtype, compute_target, data, stride)
+        return new(mesh, ncomp, dtype, compute_target, data, stride, _ncomp_first_max)
     end
+end
+
+
+"""
+If a Determine the size of the iteration set required to iterated over all of
+the DOFs stored in a CellDat.
+"""
+function get_iteration_set_size_mesh_dofs(cell_dat)
+    # Either there are a constant number of DOFs per cell or there is a
+    # variable number determined by an additional CellDat. In the second case
+    # the stride (currently) is the maximum number of DOFs in any cell.
+    return cell_dat.ncomp_first_max
 end
 
 
@@ -58,6 +73,7 @@ function resize_cell_dat(cell_dat)
         end
 
         cell_dat.stride = max_var_ncomp * comp_factor
+        cell_dat.ncomp_first_max = max_var_ncomp
     end
 
 end

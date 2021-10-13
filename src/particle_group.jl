@@ -32,6 +32,7 @@ mutable struct ParticleGroup
     position_to_rank_task
 
     position_dat::String
+    maps
 
     function ParticleGroup(domain, particle_dats, compute_target=false)
         new_particle_group = new(domain, OrderedDict(), compute_target, 0, false, false)
@@ -58,6 +59,8 @@ mutable struct ParticleGroup
         end
 
         initialise_particle_group_move(new_particle_group, true)
+
+        new_particle_group.maps = Dict()
 
         return new_particle_group
     end

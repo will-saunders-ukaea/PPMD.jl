@@ -37,11 +37,10 @@ include("global_array.jl")
 include("particle_loop.jl")
 include("domain.jl")
 include("utility.jl")
-
 include("mesh.jl")
 include("cell_dat.jl")
-
 include("cell_to_particle_map.jl")
+include("pair_loop.jl")
 
 
 end # module
