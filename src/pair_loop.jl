@@ -24,7 +24,7 @@ Generate code for the data structure and access type prior to the kernel launch
 """
 function get_pre_kernel_launch(kernel_sym, dat::CellDat, access_mode, target)
     remaining_dims = join((":" for dx in 1:length(dat.ncomp)-1), ",")
-    return "$kernel_sym = view(_global_$kernel_sym, _dofx, $remaining_dims )"
+    return "#$kernel_sym = view(_global_$kernel_sym, _dofx, $remaining_dims, _cellx )"
 end
 
 
@@ -35,6 +35,15 @@ halo exchanges.
 """
 function get_loop_args(N, kernel_sym, dat::CellDat, access_mode, target)
     return (dat.data,)
+end
+
+
+"""
+After a loop has completed perform actions for each data structure and access
+type, e.g. reduction operations.
+"""
+function post_loop(N, kernel_sym, dat::CellDat, access_mode, target, arg)
+    return
 end
 
 
@@ -190,11 +199,19 @@ function DOFParticlePairLoop(
         ix = _ix
         """
         finalise_loop_1 = ""
+
+        if typeof(cell2dofcount_map) == CellDat
+            dof_count_lookup = "_C2DOFCOUNT_MAP[_cellx]"
+        else
+            dof_count_lookup = "_C2DOF_STRIDE"
+        end
+
+
         init_loop_2 = """
         # loop over cell dofs
-        _cell = _P2C_MAP[ix, 1]
+        _cellx = _P2C_MAP[ix, 1]
         _start_dof = 1
-        _end_dof = _C2DOFCOUNT_MAP[_cellx]
+        _end_dof = $dof_count_lookup
         for _dofx in _start_dof:_end_dof
         """
         finalise_loop_2 = "end"
@@ -247,6 +264,8 @@ function DOFParticlePairLoop(
         _local_ix = @index(Local)
         _group_ix = @index(Group)
         _ix = @index(Global)
+
+        @show _ix
         
         $init_loop_1 # init loop 1 - loop over dofs or particles
         
@@ -257,7 +276,7 @@ function DOFParticlePairLoop(
                 $init_loop_2 # init loop 2
 
                     $(pre_kernel_launch[2])
-
+                    
                     $(kernel.source)
 
                 $finalise_loop_2 #end loop 2
@@ -292,23 +311,47 @@ function DOFParticlePairLoop(
         assemble_map_if_required(cell2particle_map)
         
         p2cell_dat = cellid_particle_dat(particle_group, mesh)
-        p2cell_dat_arg = get_loop_args(npart_local, "_P2C_MAP", p2cell_dat, READ, target)
+        p2cell_dat_arg = get_loop_args(npart_local, "_P2C_MAP", p2cell_dat, READ, target)[1]
 
         call_args = flatten([get_loop_args(npart_local, px.first, px.second[1], px.second[2], target) for px in args])
         N = first_iteration_size()
 
-        #event = loop_func(
-        #    npart_local,
-        #    ncell_local,
-        #    cell2dofcount_map.data
-        #    max_dof_count,
-        #    cell2dofcount_map.cell_npart.data,
-        #    cell2dofcount_map.cell_children.stride,
-        #    cell2dofcount_map.cell_children.data,
-        #    p2cell_dat_arg,
-        #    call_args...,
-        #    ndrange=N
-        #)
+        if typeof(cell2dofcount_map) == CellDat
+            cell2dofcount_arg = cell2dofcount_map.data
+        else
+            cell2dofcount_arg = cell2dofcount_map
+        end
+        
+        @show N
+        @show    npart_local
+        @show    ncell_local
+        @show    cell2dofcount_map
+        @show    max_dof_count
+        @show    cell2particle_map.cell_npart.data
+        @show    cell2particle_map.cell_children.stride
+        @show    cell2particle_map.cell_children.data
+        @show    p2cell_dat_arg
+        @show    call_args
+
+        event = loop_func(
+            npart_local,
+            ncell_local,
+            cell2dofcount_map,
+            max_dof_count,
+            cell2particle_map.cell_npart.data,
+            cell2particle_map.cell_children.stride,
+            cell2particle_map.cell_children.data,
+            p2cell_dat_arg,
+            call_args...,
+            ndrange=N
+        )
+
+        wait(event)
+
+        # handle any post loop procedures
+        for px in zip(args, call_args)
+            post_loop(N, px[1].first, px[1].second[1], px[1].second[2], target, px[2])
+        end
 
     end
 

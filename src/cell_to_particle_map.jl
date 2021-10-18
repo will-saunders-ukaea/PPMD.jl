@@ -159,7 +159,6 @@ a new map if one does not exist already.
 function get_cell_to_particle_map(mesh, particle_group)
     
     hash = cell_to_particle_map_hash(mesh)
-    @show hash
     if !haskey(particle_group.maps, hash)
         map = CellToParticleMap(mesh, particle_group)
         particle_group.maps[hash] = map
