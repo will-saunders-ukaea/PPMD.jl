@@ -144,6 +144,42 @@ mutable struct CellToParticleMap
 end
 
 
+"""
+Get a key for a cell to particle map using a given mesh.
+"""
+function cell_to_particle_map_hash(mesh)
+    return "cell_to_particle_map_" * mesh.hash
+end
+
+
+"""
+Get the map from cells to particles for a given Mesh and ParticleGroup. Creates
+a new map if one does not exist already.
+"""
+function get_cell_to_particle_map(mesh, particle_group)
+    
+    hash = cell_to_particle_map_hash(mesh)
+    @show hash
+    if !haskey(particle_group.maps, hash)
+        map = CellToParticleMap(mesh, particle_group)
+        particle_group.maps[hash] = map
+    else
+        map = particle_group.maps[hash]
+    end
+    
+    return map
+end
+
+
+"""
+Assemble a cell to particle map if required.
+"""
+function assemble_map_if_required(map)
+    
+    # TODO use version ids to determine if reassembly is required.
+    assemble_cell_to_particle_map(map)
+
+end
 
 
 

@@ -24,7 +24,17 @@ Generate code for the data structure and access type prior to the kernel launch
 """
 function get_pre_kernel_launch(kernel_sym, dat::CellDat, access_mode, target)
     remaining_dims = join((":" for dx in 1:length(dat.ncomp)-1), ",")
-    return "$kernel_sym = view(_global_$kernel_sym, _global_dof, $remaining_dims )"
+    return "$kernel_sym = view(_global_$kernel_sym, _dofx, $remaining_dims )"
+end
+
+
+"""
+Get the calling arguments for the data structure and access mode. This may 
+also handle any communication required before the loop launches. e.g.
+halo exchanges.
+"""
+function get_loop_args(N, kernel_sym, dat::CellDat, access_mode, target)
+    return (dat.data,)
 end
 
 
@@ -76,6 +86,35 @@ end
 
 
 """
+Get the map from cells to DOFs counts. Finds which args contain the DOFs and
+validates the map is the same for those CellDats.
+"""
+function find_cell_to_dof_map(args_a, args_b)
+    for args in (args_a, args_b)
+        if args_dat_type(args) == CellDat
+            map = nothing
+            max_dof_dat = nothing
+            for argx in args
+                dat = argx.second[1]
+                if typeof(dat) == CellDat
+                    if map == nothing
+                        map = dat.ncomp[1]
+                        max_dof_dat = dat
+                    else
+                        @assert dat.ncomp[1] == map
+                    end
+                end
+            end
+            
+            get_max_dof_count = () -> return max_dof_dat.ncomp_first_max
+
+            return map, get_max_dof_count
+        end
+    end
+end
+
+
+"""
 A PairLoop between CellDats and ParticleDats on a per cell basis.
 """
 function DOFParticlePairLoop(
@@ -95,6 +134,7 @@ function DOFParticlePairLoop(
     mesh = first_cell_dat.mesh
     first_particle_dat = find_particle_dat(args)
     particle_group = first_particle_dat.particle_group
+    cell2dofcount_map, get_max_dof_count = find_cell_to_dof_map(args_a, args_b)
 
     # create the map from cells to particles
     cell_to_particle_map = CellToParticleMap(mesh, particle_group)
@@ -126,7 +166,7 @@ function DOFParticlePairLoop(
         end
 
         # currently this storage is a matrix 
-        _global_dofx = _ix
+        _dofx = _ix
         """
         finalise_loop_1 = ""
         init_loop_2 = """
@@ -153,9 +193,9 @@ function DOFParticlePairLoop(
         init_loop_2 = """
         # loop over cell dofs
         _cell = _P2C_MAP[ix, 1]
-        _start_dof = ((_cellx-1) * _C2DOF_STRIDE)
-        _end_dof = _start_dof + _C2DOFCOUNT_MAP[_cellx]
-        for _global_dofx in _start_dof:_end_dof
+        _start_dof = 1
+        _end_dof = _C2DOFCOUNT_MAP[_cellx]
+        for _dofx in _start_dof:_end_dof
         """
         finalise_loop_2 = "end"
 
@@ -232,7 +272,7 @@ function DOFParticlePairLoop(
     println(kernel_func)
 
     l = Task(
-        kernel.name * "_" * string(target) * "_ParticleLoop",
+        kernel.name * "_" * string(target) * "_DOFParticlePairLoop",
         () -> return
     )
 
@@ -242,7 +282,39 @@ function DOFParticlePairLoop(
     ka_methods = Base.invokelatest(new_kernel)
     loop_func = Base.invokelatest(ka_methods, target.device, target.workgroup_size)
 
+    # function for the task
+    function loop_wrapper()
+        
+        npart_local = particle_group.npart_local
+        ncell_local = mesh.cell_count
+        max_dof_count = get_max_dof_count()
+        cell2particle_map = get_cell_to_particle_map(mesh, particle_group)
+        assemble_map_if_required(cell2particle_map)
+        
+        p2cell_dat = cellid_particle_dat(particle_group, mesh)
+        p2cell_dat_arg = get_loop_args(npart_local, "_P2C_MAP", p2cell_dat, READ, target)
 
+        call_args = flatten([get_loop_args(npart_local, px.first, px.second[1], px.second[2], target) for px in args])
+        N = first_iteration_size()
+
+        #event = loop_func(
+        #    npart_local,
+        #    ncell_local,
+        #    cell2dofcount_map.data
+        #    max_dof_count,
+        #    cell2dofcount_map.cell_npart.data,
+        #    cell2dofcount_map.cell_children.stride,
+        #    cell2dofcount_map.cell_children.data,
+        #    p2cell_dat_arg,
+        #    call_args...,
+        #    ndrange=N
+        #)
+
+    end
+
+
+    l.execute = loop_wrapper
+    return l
 end
 
 
