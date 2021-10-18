@@ -24,7 +24,7 @@ Generate code for the data structure and access type prior to the kernel launch
 """
 function get_pre_kernel_launch(kernel_sym, dat::CellDat, access_mode, target)
     remaining_dims = join((":" for dx in 1:length(dat.ncomp)-1), ",")
-    return "#$kernel_sym = view(_global_$kernel_sym, _dofx, $remaining_dims, _cellx )"
+    return "$kernel_sym = view(_global_$kernel_sym, _dofx, $remaining_dims, _cellx )"
 end
 
 
@@ -264,8 +264,6 @@ function DOFParticlePairLoop(
         _local_ix = @index(Local)
         _group_ix = @index(Group)
         _ix = @index(Global)
-
-        @show _ix
         
         $init_loop_1 # init loop 1 - loop over dofs or particles
         
