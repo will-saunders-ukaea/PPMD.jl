@@ -3,6 +3,13 @@ export CellDat, resize_cell_dat, getindex, setindex
 using CUDA
 CUDA.allowscalar(true)
 
+
+"""
+A CellDat is a data structure to store arrays worth of information on a per
+cell basis. This is useful for storing maps from cells to particle indices and
+per cell data such as dofs/coefficients. TODO better describe non-constant
+arity.
+"""
 mutable struct CellDat
     mesh
     ncomp

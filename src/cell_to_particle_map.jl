@@ -76,7 +76,9 @@ end
 
 
 """
-Contains objects required to map from cells to particles within that cell.
+Contains objects required to map from cells to particles within that cell. Uses
+the Matrix based methods described by Rapaport "Enhanced molecular dynamics
+performance with a programmable graphics processor" (2011).
 """
 mutable struct CellToParticleMap
     mesh
@@ -97,7 +99,8 @@ mutable struct CellToParticleMap
         cellid = cellid_particle_dat(particle_group, mesh)
         # creates the layer ParticleDat
         layer = layer_particle_dat(particle_group, mesh)
-
+        
+        # computes the "layer" (see Rapaport paper) this particle is on
         kernel_layer = Kernel(
             "bin_particles_into_cells_kernel",
             """
@@ -118,7 +121,8 @@ mutable struct CellToParticleMap
         )
 
         new_map.layer_stride = DirectArray([new_map.cell_children.stride,], compute_target)
-
+        
+        # stores the particle on the layer
         kernel_assemble = Kernel(
             "populate_cell_to_particle_map",
             """

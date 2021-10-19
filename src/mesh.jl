@@ -51,12 +51,14 @@ end
 
 """
 Create a task, e.g. ParticleLoop, that maps particle positions to cell indices.
+Calling execute on this task will use the current particle positions to bin the
+particles into the mesh cells.
 """
 function get_map_particle_to_cell_task(mesh::MinimalWidthCartesianMesh, particle_group::ParticleGroup)
     
-    
     ndim = particle_group.domain.ndim
-
+    
+    # for each dimension - bin the particle into a cell
     src = ""
     for dx in 1:ndim
         cell_width_dx = (mesh.upper_bounds[dx] - mesh.lower_bounds[dx]) / mesh.cell_dim[dx]
@@ -67,9 +69,12 @@ function get_map_particle_to_cell_task(mesh::MinimalWidthCartesianMesh, particle
             cell_$dx = $(mesh.cell_dim[dx] - 1)
         end
         """
+        # the above if is for when a particle is on the sub-domain by epsilon
+        # but outside the last cell by a tolerance
         src *= src_dx
     end
-    
+
+    # convert the per-dimension cells into a linear index
     src  *= "\nlin_$ndim = cell_$ndim"
     for dx in ndim-1:-1:1
         src *= "\nlin_$dx = cell_$dx + $(mesh.cell_dim[dx]) * lin_$(dx+1)"
@@ -77,7 +82,8 @@ function get_map_particle_to_cell_task(mesh::MinimalWidthCartesianMesh, particle
     src *= """\n
     CELL[ix, 1] = lin_1 + 1
     """
-
+    
+    # store the per-rank data in global arrays for access in the kernel
     lower_ga = GlobalArray(ndim, Float64, particle_group.compute_target)
     lower_ga[:] = mesh.lower_bounds[:]
     upper_ga = GlobalArray(ndim, Float64, particle_group.compute_target)
@@ -98,6 +104,9 @@ function get_map_particle_to_cell_task(mesh::MinimalWidthCartesianMesh, particle
              "UPPER" => (upper_ga, READ),
         )
     )
+
+    # store the GlobalArrays on the ParticleLoop such that they do not go out
+    # of scope and freed.
     bin_loop.data["lower_ga"] = lower_ga
     bin_loop.data["upper_ga"] = upper_ga
     

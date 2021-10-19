@@ -102,6 +102,7 @@ function get_position_to_rank_kernel(domain::T, position_dat, rank_dat) where (T
 
     dims, periods, coords = MPI.Cart_get(domain.comm)
     
+    # generates the kernel that maps positions to ranks for n dimensions
     src = ""
     for dx in 1:domain.ndim
         

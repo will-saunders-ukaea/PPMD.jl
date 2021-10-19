@@ -1,5 +1,9 @@
 export execute
 
+
+"""
+Generic container for a callable object that can be passed to execute.
+"""
 mutable struct Task
     name::String
     execute
@@ -12,6 +16,10 @@ mutable struct Task
 end
 
 
+"""
+Runs a single task and accumulates the total runtime and call count if the task
+is of type Task.
+"""
 function run_task(task)
 
     if typeof(task) <: Task
@@ -27,6 +35,9 @@ function run_task(task)
 end
 
 
+"""
+Synchronously execute one or more tasks in order.
+"""
 function execute(task)
     
     if hasproperty(task, :execute)
