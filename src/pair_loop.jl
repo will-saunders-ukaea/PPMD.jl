@@ -286,7 +286,7 @@ function DOFParticlePairLoop(
     end
     """
 
-    println(kernel_func)
+    #println(kernel_func)
 
     l = Task(
         kernel.name * "_" * string(target) * "_DOFParticlePairLoop",
@@ -320,16 +320,16 @@ function DOFParticlePairLoop(
             cell2dofcount_arg = cell2dofcount_map
         end
         
-        @show N
-        @show    npart_local
-        @show    ncell_local
-        @show    cell2dofcount_map
-        @show    max_dof_count
-        @show    cell2particle_map.cell_npart.data
-        @show    cell2particle_map.cell_children.stride
-        @show    cell2particle_map.cell_children.data
-        @show    p2cell_dat_arg
-        @show    call_args
+        #@show N
+        #@show    npart_local
+        #@show    ncell_local
+        #@show    cell2dofcount_map
+        #@show    max_dof_count
+        #@show    cell2particle_map.cell_npart.data
+        #@show    cell2particle_map.cell_children.stride
+        #@show    cell2particle_map.cell_children.data
+        #@show    p2cell_dat_arg
+        #@show    call_args
 
         event = loop_func(
             npart_local,
