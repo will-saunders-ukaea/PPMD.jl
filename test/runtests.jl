@@ -16,3 +16,5 @@ include("test_add_extra_particle_dat.jl")
 include("test_cell_to_particle_map_construction.jl")
 include("test_pair_dof_part_basic_read.jl")
 include("test_pair_dof_part_basic_write.jl")
+include("test_bin_particles_into_mesh_cells.jl")
+

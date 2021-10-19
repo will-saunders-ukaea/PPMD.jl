@@ -1,6 +1,7 @@
 using KernelAbstractions
 using FunctionWrappers: FunctionWrapper
 using DataStructures
+using CUDA
 
 
 function flatten(c)
@@ -226,6 +227,18 @@ function get_atomic_add(target::KACPU)
     return "cpu_atomic_add"
 end
 
+# this seems rediculous to have to implement
+cuda_Float64_to_Int64(x::Float64) = ccall("extern __nv_double2ll_rz", llvmcall, Clonglong, (Cdouble,), x)
+cpu_Float64_to_Int64(x::Float64) = convert(Int64, x)
+function get_Float64_to_Int64(target::KACUDADevice)
+    return "cuda_Float64_to_Int64"
+end
+function get_Float64_to_Int64(target::KACPU)
+    @assert sizeof(Cptrdiff_t) == 8
+    return "cpu_Float64_to_Int64"
+end
+
+
 function ParticleLoop(
     target,
     kernel,
@@ -260,6 +273,7 @@ function ParticleLoop(
     kernel_func = """
     @kernel function kernel_wapper($kernel_params)
         ATOMIC_ADD = $(get_atomic_add(target))
+        FLOAT64_TO_INT64 = $(get_Float64_to_Int64(target))
 
         _local_ix = @index(Local)
         _group_ix = @index(Group)
