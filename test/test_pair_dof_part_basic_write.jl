@@ -7,11 +7,11 @@ using Random
 
 CUDA.allowscalar(true)
 
-@testset "test_pair_dof_part_basic_read_1 $spec" for spec in (KACPU(), KACUDADevice(),)
+@testset "test_pair_dof_part_basic_write_1 $spec" for spec in (KACUDADevice(),KACPU(),)
 
     target_device = spec
     
-    N = 1270
+    N = 10
 
     extents = (4.0, 4.0)
     boundary_condition = FullyPeroidicBoundary()
@@ -33,6 +33,7 @@ CUDA.allowscalar(true)
         A,
         Dict(
              "P" => rand_within_extents(N, domain.extent),
+             "Q" => ones(Float64, (N, 1))
         )
     )
     
@@ -43,39 +44,45 @@ CUDA.allowscalar(true)
     cellid[:, 1] = random_cells
     
     # create some dof data to read
-    CD_B = CellDat(mesh, (4, 1), Float64, target_device)
-    for cx in 1:mesh.cell_count
-        for dx in 1:4
-            CD_B[cx, dx, 1] = cx*4+dx
-        end
-    end
+    ndof = 2
+    CD_A = CellDat(mesh, (ndof, 2), Float64, target_device)
+    CD_B = CellDat(mesh, (ndof, 1), Float64, target_device)
 
-    # loop over dofs and sum the values onto the particle
+    CD_A[:, 1, 1] = 3.0 * ones(mesh.cell_count)
+    CD_A[:, 1, 2] = 4.0 * ones(mesh.cell_count)
+    CD_A[:, 2, 1] = 13.0 * ones(mesh.cell_count)
+    CD_A[:, 2, 2] = 14.0 * ones(mesh.cell_count)    
+
+    # loop over particles and sum the values onto the dof
     kernel_dof_read = Kernel(
         "dof_read_example",
         """
-        Q[ix, 1] += B[1]
+        B[1] += (A[1] + A[2]) * Q[ix, 1]
         """
     )
     loop = PairLoop(
         target_device,
         kernel_dof_read,
         Dict(
-            "B" => (CD_B, READ),
+            "A" => (CD_A, READ),
+            "B" => (CD_B, INC),
         ),
         Dict(
-            "Q" => (A["Q"], INC),
+            "Q" => (A["Q"], READ),
         )
     )
 
     execute(loop)
 
+    correct_array = zeros(Float64, (mesh.cell_count, ndof, 1))
     for px in 1:A.npart_local
         cell = cellid[px, 1]
-        correct = sum(CD_B[cell, :, :])
-        to_test = A["Q"][px, 1]
-        @test abs(correct - to_test) < 1E-12
+        correct_array[cell, 1] += 7.0 
+        correct_array[cell, 2] += 27.0 
     end
 
+    for cellx in 1:mesh.cell_count
+        @test norm(CD_B[cellx, :, 1] - correct_array[cellx, :], Inf) < 1E-12
+    end
 
 end

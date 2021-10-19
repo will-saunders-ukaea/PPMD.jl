@@ -159,23 +159,23 @@ function DOFParticlePairLoop(
     end
     args_main_types = (args_dat_type(args_first), args_dat_type(args_second))
 
+
+    if typeof(cell2dofcount_map) == CellDat
+        dof_count_lookup = "_C2DOFCOUNT_MAP[_cellx]"
+    else
+        dof_count_lookup = "_C2DOF_STRIDE"
+    end
+
+
     if args_main_types == (CellDat, ParticleDat)
         # first loop is over DOFs second over particles
         init_loop_1 = """
         # assume _ix is at least ncell * max_n_dof
 
         # compute the cell containing the DOF
-        _cellx = div(_ix, _C2DOF_STRIDE)
-        # compute the DOF this interation touches
-        _dofx = mod(_ix, _C2DOF_STRIDE)
-        
-        # mask off the dofs that don't exist
-        if (_dofx > _C2DOFCOUNT_MAP[_cellx])
-            return
-        end
-
-        # currently this storage is a matrix 
-        _dofx = _ix
+        _cellx = div(_ix-1, _C2DOF_STRIDE) + 1
+        # compute the DOF this iteration touches
+        _dofx = mod(_ix-1, _C2DOF_STRIDE) + 1
         """
         finalise_loop_1 = ""
         init_loop_2 = """
@@ -183,7 +183,7 @@ function DOFParticlePairLoop(
 
         _npart_in_cell = _CELL_PARTICLE_COUNTS[_cellx]
         for _layerx in 1:_npart_in_cell
-            ix = _C2P_MAP[_cellx * _C2P_MAP_STRIDE + _layerx]
+            ix = _C2P_MAP[(_cellx - 1) * _C2P_MAP_STRIDE + _layerx]
         """
         finalise_loop_2 = "end"
 
@@ -192,6 +192,13 @@ function DOFParticlePairLoop(
 
         # function to run to build cell to particle maps
         init_particle_map = () -> return assemble_cell_to_particle_map(cell_to_particle_map)
+
+        init_mask = """
+        # mask off the dofs that don't exist (for the non-constant case)
+        if (_dofx <= $dof_count_lookup)
+        """
+        finalise_mask = "end"
+
     else
         # first loop is over particles second over dofs
         init_loop_1 = """
@@ -199,13 +206,6 @@ function DOFParticlePairLoop(
         ix = _ix
         """
         finalise_loop_1 = ""
-
-        if typeof(cell2dofcount_map) == CellDat
-            dof_count_lookup = "_C2DOFCOUNT_MAP[_cellx]"
-        else
-            dof_count_lookup = "_C2DOF_STRIDE"
-        end
-
 
         init_loop_2 = """
         # loop over cell dofs
@@ -222,6 +222,9 @@ function DOFParticlePairLoop(
         # Do not need the map from cells to particles in this case
         # only particles to cells
         init_particle_map = () -> return true
+
+        init_mask = ""
+        finalise_mask = ""
     end
     
     # Assemble the kernel function parameters
@@ -266,11 +269,13 @@ function DOFParticlePairLoop(
         _ix = @index(Global)
         
         $init_loop_1 # init loop 1 - loop over dofs or particles
+
+        $init_mask
         
             $(pre_kernel_launch[1])
             $pre_kernel_sync
 
-            @inbounds begin
+            #@inbounds begin
                 $init_loop_2 # init loop 2
 
                     $(pre_kernel_launch[2])
@@ -278,7 +283,9 @@ function DOFParticlePairLoop(
                     $(kernel.source)
 
                 $finalise_loop_2 #end loop 2
-            end
+            #end #end inbounds
+
+        $finalise_mask
         $finalise_loop_1 # end loop 1
 
         $post_kernel_launch
