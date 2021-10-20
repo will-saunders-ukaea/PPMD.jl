@@ -32,6 +32,7 @@ mutable struct ParticleGroupVTK
     function ParticleGroupVTK(filename, particle_group)
         rank = MPI.Comm_rank(particle_group.domain.comm)
         particle_dats = keys(particle_group.particle_dats)
+        mkpath(dirname(filename))
         return new(filename, particle_group, rank, 0, particle_dats)
     end
 end
