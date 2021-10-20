@@ -41,6 +41,7 @@ include("mesh.jl")
 include("cell_dat.jl")
 include("cell_to_particle_map.jl")
 include("pair_loop.jl")
+include("output.jl")
 
 
 end # module
