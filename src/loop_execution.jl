@@ -9,9 +9,10 @@ mutable struct Task
     execute
     call_count::Int64
     runtime::Float64
+    runtime_inner::Float64
     data::Dict
     function Task(name, func)
-        return new(name, func, 0, 0.0, Dict())
+        return new(name, func, 0, 0.0, 0.0, Dict())
     end
 end
 

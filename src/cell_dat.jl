@@ -1,4 +1,4 @@
-export CellDat, resize_cell_dat, getindex, setindex
+export CellDat, resize_cell_dat, getindex, setindex, show
 
 using CUDA
 CUDA.allowscalar(true)
@@ -102,6 +102,8 @@ function Base.getindex(dat::CellDat, key...)
 
     base_array = get_data_on_host(dat, dat.compute_target, Tuple(UnitRange(1, rx) for rx in size(dat.data)))
     
+    @assert typeof(key[1]) <: Int "Cannot slice across cells in CellDat indexing."
+
     key = (key[2:length(key)]... ,key[1])
 
     base_array = base_array[key...]
@@ -114,3 +116,20 @@ function Base.getindex(dat::CellDat, key...)
 end
 
 
+"""
+Pretty(ish) printing of CellDats
+"""
+function Base.show(io::IO, cell_dat::CellDat)
+    print(io, "\nncell_local: ", cell_dat.mesh.cell_count, "\n")
+    print(io, "dtype:       ", cell_dat.dtype, "\n")
+    print(io, "ncomp:       ", cell_dat.ncomp, "\n")
+    if isdefined(cell_dat, :compute_target)
+        print(io, "target:      ", cell_dat.compute_target, "\n")
+    end
+    if isdefined(cell_dat, :data)
+        ncomp_slice = [(:) for nx in cell_dat.ncomp]
+        for ix in 1:cell_dat.mesh.cell_count
+            print(io, cell_dat[ix, ncomp_slice...], "\n")
+        end
+    end
+end

@@ -58,23 +58,6 @@ function layer_particle_dat(particle_group, mesh)
 end
 
 
-
-
-"""
-Assume there exists a ParticleDat containing the owning cell of each particle.
-Compute the layer each particle is on and the total number of particles in each
-cell then build the cell to particle map.
-"""
-function assemble_cell_to_particle_map(map)
-
-    execute(map.loop_layer)
-    resize_cell_dat(map.cell_children)
-    CUDA.@allowscalar map.layer_stride.dat.data[1] = map.cell_children.stride
-    execute(map.loop_assemble)
-
-end
-
-
 """
 Contains objects required to map from cells to particles within that cell. Uses
 the Matrix based methods described by Rapaport "Enhanced molecular dynamics
@@ -144,6 +127,32 @@ mutable struct CellToParticleMap
         
         return new_map
     end
+
+end
+
+
+"""
+Reset a cell to particle map.
+"""
+function reset(map::CellToParticleMap)
+    for cx in 1:map.mesh.cell_count
+        map.cell_npart[cx, 1] = 0
+    end
+end
+
+
+"""
+Assume there exists a ParticleDat containing the owning cell of each particle.
+Compute the layer each particle is on and the total number of particles in each
+cell then build the cell to particle map.
+"""
+function assemble_cell_to_particle_map(map)
+    
+    reset(map)
+    execute(map.loop_layer)
+    resize_cell_dat(map.cell_children)
+    CUDA.@allowscalar map.layer_stride.dat.data[1] = map.cell_children.stride
+    execute(map.loop_assemble)
 
 end
 

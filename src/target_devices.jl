@@ -13,7 +13,7 @@ struct KACPU <: KernelAbstractionsDevice
     device
     workgroup_size::Int64
     ArrayType
-    function KACPU(workgroup_size=32)
+    function KACPU(workgroup_size=1)
         return new(CPU(), workgroup_size, Array)
     end
 end

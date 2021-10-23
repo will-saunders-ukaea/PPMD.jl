@@ -10,6 +10,7 @@ mutable struct MinimalWidthCartesianMesh
     min_width
     cell_dim
     cell_count
+    cell_widths
     hash
     lower_bounds
     upper_bounds
@@ -18,6 +19,7 @@ mutable struct MinimalWidthCartesianMesh
         
         ndim = domain.ndim
         cell_dim = [0 for ix in 1:ndim]
+        cell_widths = [0.0 for ix in 1:ndim]
     
         lower_bounds = zeros(Float64, ndim)
         upper_bounds = zeros(Float64, ndim)
@@ -31,10 +33,11 @@ mutable struct MinimalWidthCartesianMesh
 
             lower_bounds[dx] = lower
             upper_bounds[dx] = upper
+            cell_widths[dx] = (upper - lower) / ncells
         end
         cell_count = reduce(*, cell_dim)
         
-        new_mesh = new(domain, min_width, cell_dim, cell_count)
+        new_mesh = new(domain, min_width, cell_dim, cell_count, cell_widths)
         
         # compute the hash for this mesh
         hash = "$(typeof(new_mesh))_" * hash_primitive_type(min_width)

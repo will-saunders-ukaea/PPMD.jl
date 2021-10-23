@@ -3,7 +3,7 @@ export PairLoop
 using KernelAbstractions
 using FunctionWrappers: FunctionWrapper
 using DataStructures
-
+using Profile
 
 function arg_types(args)
     type_args = Set((typeof(args[keyx][1]) for keyx in keys(args)))
@@ -15,7 +15,7 @@ end
 Construct the parameters for the kernel function
 """
 function get_wrapper_param(kernel_sym, dat::CellDat, access_mode, target)
-    return ("_global_$kernel_sym",)
+    return (const_modifier("_global_$kernel_sym", access_mode),)
 end
 
 
@@ -251,14 +251,14 @@ function DOFParticlePairLoop(
     # Assemble the kernel function
     kernel_func = """
     @kernel function kernel_pair_wapper(
-        _NPART_LOCAL,
-        _NCELL_LOCAL,
-        _C2DOFCOUNT_MAP,
-        _C2DOF_STRIDE,
-        _CELL_PARTICLE_COUNTS,
-        _C2P_MAP_STRIDE,
-        _C2P_MAP,
-        _P2C_MAP,
+        @Const(_NPART_LOCAL),
+        @Const(_NCELL_LOCAL),
+        @Const(_C2DOFCOUNT_MAP),
+        @Const(_C2DOF_STRIDE),
+        @Const(_CELL_PARTICLE_COUNTS),
+        @Const(_C2P_MAP_STRIDE),
+        @Const(_C2P_MAP),
+        @Const(_P2C_MAP),
         $kernel_params
     )
 
@@ -275,7 +275,7 @@ function DOFParticlePairLoop(
             $(pre_kernel_launch[1])
             $pre_kernel_sync
 
-            #@inbounds begin
+            @inbounds begin
                 $init_loop_2 # init loop 2
 
                     $(pre_kernel_launch[2])
@@ -283,7 +283,7 @@ function DOFParticlePairLoop(
                     $(kernel.source)
 
                 $finalise_loop_2 #end loop 2
-            #end #end inbounds
+            end #inbounds
 
         $finalise_mask
         $finalise_loop_1 # end loop 1
@@ -305,7 +305,8 @@ function DOFParticlePairLoop(
     
     ka_methods = Base.invokelatest(new_kernel)
     loop_func = Base.invokelatest(ka_methods, target.device, target.workgroup_size)
-
+    
+    #a = -1
     # function for the task
     function loop_wrapper()
         
@@ -313,8 +314,12 @@ function DOFParticlePairLoop(
         ncell_local = mesh.cell_count
         max_dof_count = get_max_dof_count()
         cell2particle_map = get_cell_to_particle_map(mesh, particle_group)
-        assemble_map_if_required(cell2particle_map)
         
+        #if a < 0
+        assemble_map_if_required(cell2particle_map)
+        #a = 1
+        #end
+
         p2cell_dat = cellid_particle_dat(particle_group, mesh)
         p2cell_dat_arg = get_loop_args(npart_local, "_P2C_MAP", p2cell_dat, READ, target)[1]
 
@@ -338,6 +343,8 @@ function DOFParticlePairLoop(
         #@show    p2cell_dat_arg
         #@show    call_args
 
+        t0 = time_ns()
+        #@profile begin
         event = loop_func(
             npart_local,
             ncell_local,
@@ -350,8 +357,12 @@ function DOFParticlePairLoop(
             call_args...,
             ndrange=N
         )
-
         wait(event)
+        #end
+        #Profile.print()
+        t1 = time_ns()
+        l.runtime_inner += Float64(t1 - t0) * 1E-9
+        #@show Float64(t1 - t0) * 1E-9
 
         # handle any post loop procedures
         for px in zip(args, call_args)

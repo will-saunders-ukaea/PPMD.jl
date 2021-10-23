@@ -50,7 +50,7 @@ end
 Pretty(ish) printing of ParticleDats
 """
 function Base.show(io::IO, particle_dat::ParticleDat)
-    print(io, "npart_local: ", particle_dat.npart_local, "\n")
+    print(io, "\nnpart_local: ", particle_dat.npart_local, "\n")
     print(io, "dtype:       ", particle_dat.dtype, "\n")
     print(io, "ncomp:       ", particle_dat.ncomp, "\n")
     if isdefined(particle_dat, :compute_target)

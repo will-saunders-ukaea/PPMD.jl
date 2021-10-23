@@ -24,17 +24,28 @@ end
 
 
 """
+Modify parameter definition for constant memory access
+"""
+function const_modifier(symbol, access_mode)
+    if !access_mode.write
+        symbol = "@Const($symbol)"
+    end
+    return symbol
+end
+
+
+"""
 Construct the parameters for the kernel function
 """
 function get_wrapper_param(kernel_sym, dat::ParticleDat, access_mode, target)
-    return (kernel_sym,)
+    return (const_modifier(kernel_sym, access_mode),)
 end
 function get_wrapper_param(kernel_sym, dat::T, access_mode, target) where T<: DirectAccessT
-    return (kernel_sym,)
+    return (const_modifier(kernel_sym, access_mode),)
 end
 function get_wrapper_param(kernel_sym, dat::GlobalArray, access_mode, target)
     if (!access_mode.write)
-        return (kernel_sym,)
+        return (const_modifier(kernel_sym, access_mode),)
     end
 
     if (access_mode == INC)
@@ -320,11 +331,14 @@ function ParticleLoop(
         # Assemble the args for the call.
         call_args = flatten([get_loop_args(N, px.first, px.second[1], px.second[2], target) for px in args])
 
+        t0 = time_ns()
         event = loop_func(call_args..., ndrange=N)
  
         # alternatively this could return the event to such that multiple
         # kernels can be launched in parallel?
         wait(event)
+        t1 = time_ns()
+        l.runtime_inner += Float64(t1 - t0) * 1E-9
 
         # handle any post loop procedures
         for px in zip(args, call_args)
