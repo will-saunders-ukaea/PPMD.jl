@@ -293,7 +293,7 @@ function DOFParticlePairLoop(
     end
     """
 
-    #println(kernel_func)
+    println(kernel_func)
 
     l = Task(
         kernel.name * "_" * string(target) * "_DOFParticlePairLoop",
@@ -306,6 +306,7 @@ function DOFParticlePairLoop(
     ka_methods = Base.invokelatest(new_kernel)
     loop_func = Base.invokelatest(ka_methods, target.device, target.workgroup_size)
     
+    @show typeof(loop_func)
     #a = -1
     # function for the task
     function loop_wrapper()
@@ -357,12 +358,57 @@ function DOFParticlePairLoop(
             call_args...,
             ndrange=N
         )
+        @show typeof(event)
+        @show typeof(event.task)
+        @show event.task
         wait(event)
         #end
         #Profile.print()
         t1 = time_ns()
         l.runtime_inner += Float64(t1 - t0) * 1E-9
         #@show Float64(t1 - t0) * 1E-9
+
+        lib = Libc.Libdl.dlopen("./foo.so")
+        pairloop = Libc.Libdl.dlsym(lib, :pairloop)
+        
+        INT64 = Int64
+        REAL = Float64
+        
+        @show length(call_args)
+
+        #ccall(
+        #    pairloop, 
+        #    Cint, 
+        #    (
+        #        INT64,
+        #        INT64,
+        #        INT64,
+        #        Ref{INT64},
+        #        INT64,
+        #        Ref{INT64},
+        #        INT64,
+        #        Ref{INT64},
+        #        Ref{INT64},
+        #        Ref{REAL},
+        #        Ref{REAL},
+        #        Ref{REAL},
+        #        Ref{INT64},
+        #        Ref{REAL},
+        #        Ref{REAL},
+        #    ),
+        #    particle_group.npart_local,
+        #    npart_local,
+        #    ncell_local,
+        #    cell2dofcount_map,
+        #    max_dof_count,
+        #    cell2particle_map.cell_npart.data,
+        #    cell2particle_map.cell_children.stride,
+        #    cell2particle_map.cell_children.data,
+        #    p2cell_dat_arg,
+        #    call_args...,
+        #)
+
+
 
         # handle any post loop procedures
         for px in zip(args, call_args)
