@@ -345,7 +345,6 @@ function DOFParticlePairLoop(
         #@show    call_args
 
         t0 = time_ns()
-        #@profile begin
         event = loop_func(
             npart_local,
             ncell_local,
@@ -358,9 +357,8 @@ function DOFParticlePairLoop(
             call_args...,
             ndrange=N
         )
-        @show typeof(event)
-        @show typeof(event.task)
-        @show event.task
+
+        #@profile begin
         wait(event)
         #end
         #Profile.print()
