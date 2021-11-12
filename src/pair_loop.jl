@@ -4,6 +4,8 @@ using KernelAbstractions
 using FunctionWrappers: FunctionWrapper
 using DataStructures
 using Profile
+using ProfileSVG
+
 
 function arg_types(args)
     type_args = Set((typeof(args[keyx][1]) for keyx in keys(args)))
@@ -130,7 +132,8 @@ function DOFParticlePairLoop(
     target,
     kernel,
     args_a,
-    args_b
+    args_b;
+    inbounds_check=false
 )
     @assert arg_types(args_a) == Set((CellDat,))
 
@@ -248,6 +251,15 @@ function DOFParticlePairLoop(
     end
 
 
+    if inbounds_check
+        inbounds_begin = ""
+        inbounds_end = ""
+    else
+        inbounds_begin = "@inbounds begin"
+        inbounds_end = "end"
+    end
+
+
     # Assemble the kernel function
     kernel_func = """
     @kernel function kernel_pair_wapper(
@@ -275,7 +287,7 @@ function DOFParticlePairLoop(
             $(pre_kernel_launch[1])
             $pre_kernel_sync
 
-            @inbounds begin
+            $inbounds_begin
                 $init_loop_2 # init loop 2
 
                     $(pre_kernel_launch[2])
@@ -283,7 +295,7 @@ function DOFParticlePairLoop(
                     $(kernel.source)
 
                 $finalise_loop_2 #end loop 2
-            end #inbounds
+            $inbounds_end
 
         $finalise_mask
         $finalise_loop_1 # end loop 1
@@ -344,6 +356,7 @@ function DOFParticlePairLoop(
         #@show    call_args
 
         t0 = time_ns()
+        #Profile.clear()
         #@profile begin
         event = loop_func(
             npart_local,
@@ -359,7 +372,18 @@ function DOFParticlePairLoop(
         )
         wait(event)
         #end
+        
         #Profile.print()
+        #ProfileSVG.save(
+        #    "/tmp/PPMD_$(kernel.name)_$(l.call_count + 1).svg",
+        #    width=2000,
+        #    height=1500,
+        #    maxdepth=1500,
+        #    maxframes=150000
+        #)
+        #
+
+
         t1 = time_ns()
         l.runtime_inner += Float64(t1 - t0) * 1E-9
         #@show Float64(t1 - t0) * 1E-9
