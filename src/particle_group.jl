@@ -413,5 +413,10 @@ function global_move(particle_group)
 end
 
 
-
+"""
+Send particles to owning rank assuming that the destination ranks are "local"
+neighbours.
+"""
+function local_move(particle_group)
+end
 
