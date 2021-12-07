@@ -102,7 +102,7 @@ function Base.getindex(dat::CellDat, key...)
 
     base_array = get_data_on_host(dat, dat.compute_target, Tuple(UnitRange(1, rx) for rx in size(dat.data)))
     
-    @assert typeof(key[1]) <: Int "Cannot slice across cells in CellDat indexing."
+    #@assert typeof(key[1]) <: Int "Cannot slice across cells in CellDat indexing."
 
     key = (key[2:length(key)]... ,key[1])
 
