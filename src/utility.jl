@@ -1,4 +1,4 @@
-export rand_within_extents, get_subdomain_bounds
+export rand_within_extents, get_subdomain_bounds, get_neighbour_ranks 
 
 using Random
 
@@ -33,4 +33,45 @@ function get_subdomain_bounds(domain::StructuredCartesianDomain, dim)
 
     return lower, upper
 
+end
+
+
+"""
+Get the MPI ranks within a certain offset size on the cart comm of a StructuredCartesianDomain.
+"""
+function get_neighbour_ranks(domain::StructuredCartesianDomain, stencil_width::Int64)::Array{Cint}
+    
+    comm = domain.comm
+    coords = MPI.Cart_coords(comm)
+    rank = MPI.Comm_rank(comm)
+    dim = length(coords)
+    
+    # for each dimension create the range of possible ranks
+    iterset = [
+        convert(
+            Array{Cint}, 
+            (coords[dx] - stencil_width) : (coords[dx] + stencil_width) 
+        ) for dx in 1:dim
+    ]
+    
+    ranks = Set{Cint}()
+    # find the remote ranks - assumes periodic domain
+    tmp_array = zeros(Cint, dim)
+    for coordx in Base.Iterators.product(iterset...)
+        for dx in 1:dim
+            tmp_array[dx] = coordx[dx]
+        end
+        remote_rank = MPI.Cart_rank(comm, tmp_array)
+        if remote_rank != rank
+            push!(ranks, remote_rank)
+        end
+    end
+        
+    n_ranks = length(ranks)
+    ranks_array = Array{Cint}(undef, n_ranks)
+    for rx in 1:n_ranks
+        ranks_array[rx] = pop!(ranks)
+    end
+
+    return ranks_array
 end
