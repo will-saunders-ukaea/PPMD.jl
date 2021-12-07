@@ -3,15 +3,17 @@ using Test
 using CUDA
 using LinearAlgebra
 using MPI
+using Random
 
 @testset "local_transfer_1 $spec" for spec in (KACPU(), )
 #@testset "local_transfer_1 $spec" for spec in (KACPU(), KACUDADevice())
 
+
     target_device = spec
 
-    N = 10
+    N = 20
 
-    extents = (4.0, )
+    extents = (2.0, )
     boundary_condition = FullyPeroidicBoundary()
     domain = StructuredCartesianDomain(boundary_condition, extents)
 
@@ -19,28 +21,43 @@ using MPI
         domain,
         Dict(
              "P" => ParticleDat(1, position=true),
-             "B" => ParticleDat(1),
-             "A" => ParticleDat(1),
+             "STARTING_RANK" => ParticleDat(1, Int64),
+             "IDA" => ParticleDat(1, Int64),
+             "IDB" => ParticleDat(1, Int64),
         ),
         target_device
     )
+ 
+
+    neigbour_ranks = get_neighbour_ranks(domain, 1)
+    setup_local_transfer(A, neigbour_ranks)
+
+    size = MPI.Comm_size(domain.comm)
+    rank = MPI.Comm_rank(domain.comm)
     
+    rng = MersenneTwister(1234)
+    dest_ranks = rand(rng, (0:size-1), N, 1)
+
     add_particles(
         A,
         Dict(
              "P" => rand_within_extents(N, domain.extent),
-             "A" => rand(Float64, (N, 1))
+             "_owning_rank" => dest_ranks,
+             "STARTING_RANK" => rank * ones(Int64, (N, 1)),
+             "IDA" => reshape([ix for ix in 1:N], (N, 1)) .+ N*rank,
+             "IDB" => reshape([ix for ix in 1:N], (N, 1)) .+ N*rank,
         )
     )
+    
+    global_transfer_to_rank(A)
 
-    @show MPI.Comm_rank(domain.comm)
+    npart_total = MPI.Allreduce([A.npart_local], MPI.SUM, domain.comm)
+    @test npart_total[1] == size * N
+    @test norm(A["_owning_rank"][:, 1] .- rank, Inf) < 1E-15
 
-    neigbour_ranks = get_neighbour_ranks(domain, 1)
-
-    @show neigbour_ranks
-
-    setup_local_transfer(A, neigbour_ranks)
-
+    for ix in 1:A.npart_local
+        @test norm(A["IDA"][:, 1] - A["IDB"][:, 1], Inf) == 0
+    end
 
     
 end
