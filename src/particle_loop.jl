@@ -27,9 +27,10 @@ end
 Modify parameter definition for constant memory access
 """
 function const_modifier(symbol, access_mode)
-    if !access_mode.write
-        symbol = "@Const($symbol)"
-    end
+    # Issues with KA - bugfix TODO
+    #if !access_mode.write
+    #    symbol = "@Const($symbol)"
+    #end
     return symbol
 end
 
@@ -302,8 +303,6 @@ function ParticleLoop(
 
     end
     """
-
-    println(kernel_func)
 
     l = Task(
         kernel.name * "_" * string(target) * "_ParticleLoop",
