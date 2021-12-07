@@ -33,7 +33,9 @@ using MPI
     mesh = MinimalWidthCartesianMesh(domain, 0.1)
     C = CellDat(mesh, (1,) , Int64, target_device)
     cdata = [ix for ix in 1:6]
-    C[:] .= 0
+    for cx in 1:6
+        C[cx] = 0
+    end
 
 
     kernel_copy = Kernel(
@@ -58,7 +60,9 @@ using MPI
     )
 
     execute(loop)
-
-    @test norm(C[1:6] .- A.npart_local * cdata, Inf) < 1E-14
+    
+    for cx in 1:6
+        @test abs(C[cx, 1] - A.npart_local * cdata[cx]) < 1E-14
+    end
 
 end

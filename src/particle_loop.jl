@@ -303,6 +303,8 @@ function ParticleLoop(
     end
     """
 
+    println(kernel_func)
+
     l = Task(
         kernel.name * "_" * string(target) * "_ParticleLoop",
         () -> return
