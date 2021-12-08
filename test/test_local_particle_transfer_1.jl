@@ -54,7 +54,6 @@ using Random
     npart_total = MPI.Allreduce([A.npart_local], MPI.SUM, domain.comm)
     @test npart_total[1] == size * N
     @test norm(A["_owning_rank"][:, 1] .- rank, Inf) < 1E-15
-
     for ix in 1:A.npart_local
         @test norm(A["IDA"][:, 1] - A["IDB"][:, 1], Inf) == 0
     end
