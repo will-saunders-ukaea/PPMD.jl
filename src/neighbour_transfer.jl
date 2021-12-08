@@ -1,7 +1,27 @@
-export setup_local_transfer
+export setup_local_transfer, NeighbourExchangeRanks
 
 
 using MPI
+
+
+"""
+Data structure to hold send/recv ranks for neighbour based transfer of
+particles.
+"""
+struct NeighbourExchangeRanks
+    # Is this initialised?
+    init::Bool
+    # Remote ranks this rank could recv from.
+    recv_ranks::Array{Cint}
+    # Remote ranks this rank could send to.
+    send_ranks::Array{Cint}
+    function NeighbourExchangeRanks()
+        return new(false, Array{Cint}(undef, 0), Array{Cint}(undef, 0))
+    end
+    function NeighbourExchangeRanks(recv_ranks::Array{Cint}, send_ranks::Array{Cint})
+        return new(true, recv_ranks, send_ranks)
+    end
+end
 
 
 """
@@ -70,11 +90,12 @@ function setup_local_transfer(particle_group, neighbour_ranks::Array{Cint})
     
     # find the remote ranks that may send to this rank.
     remote_ranks = exchange_neighbour_ranks(particle_group, neighbour_ranks)
-    # ranks this rank could recv from
-    particle_group.maps["_local_exchange_recv_ranks"] = remote_ranks
-    # ranks this rank could send to
-    particle_group.maps["_local_exchange_send_ranks"] = neighbour_ranks
-    particle_group.maps["_local_exchange_init"] = true
+    
+    # store these ranks on the particle group
+    particle_group.neighbour_exchange_ranks = NeighbourExchangeRanks(
+        remote_ranks,
+        neighbour_ranks
+    )
 
 end
 
@@ -85,8 +106,9 @@ using the neighbour transfer approach.
 """
 function get_non_neighbour_ids(particle_group, particle_indices, owning_ranks)
     
-    neighbour_send_ranks = get(particle_group.maps, "_local_exchange_send_ranks", nothing)
-    if neighbour_send_ranks == nothing
+    neighbour_send_ranks = particle_group.neighbour_exchange_ranks.send_ranks
+
+    if length(neighbour_send_ranks) == 0
         return particle_indices
     end
     

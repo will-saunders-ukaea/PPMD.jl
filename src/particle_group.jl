@@ -32,7 +32,8 @@ mutable struct ParticleGroup
     position_to_rank_task
 
     position_dat::String
-    maps
+    maps::Dict
+    neighbour_exchange_ranks::NeighbourExchangeRanks
 
     function ParticleGroup(domain, particle_dats, compute_target=false)
         new_particle_group = new(domain, OrderedDict(), compute_target, 0, false, false)
@@ -61,6 +62,7 @@ mutable struct ParticleGroup
         initialise_particle_group_move(new_particle_group, true)
 
         new_particle_group.maps = Dict()
+        new_particle_group.neighbour_exchange_ranks = NeighbourExchangeRanks()
 
         return new_particle_group
     end
@@ -300,7 +302,7 @@ neighbours.
 """
 function neighbour_transfer_to_rank(particle_group)
     
-    if !(get(particle_group.maps, "_local_exchange_init", false))
+    if !(particle_group.neighbour_exchange_ranks.init)
         return
     end
 
@@ -329,8 +331,8 @@ function neighbour_transfer_to_rank(particle_group)
     num_remote_ranks = length(rank_to_indices_map)
     remote_ranks = [rx for rx in keys(rank_to_indices_map)]
 
-    neighbour_ranks_send = particle_group.maps["_local_exchange_send_ranks"]
-    neighbour_ranks_recv = particle_group.maps["_local_exchange_recv_ranks"]
+    neighbour_ranks_send = particle_group.neighbour_exchange_ranks.send_ranks
+    neighbour_ranks_recv = particle_group.neighbour_exchange_ranks.recv_ranks
     num_ranks_send = length(neighbour_ranks_send)
     num_ranks_recv = length(neighbour_ranks_recv)
 
