@@ -353,10 +353,13 @@ function neighbour_transfer_to_rank(particle_group)
         )
     end
 
+    # space and requests for isends
+    send_array = Array{MPI.Request}(undef, num_ranks_send * 2)
+
     # send the particle counts this rank will send to the remote
     send_total_count = 0
     for rankx in 1:num_ranks_send
-        MPI.Isend(
+        send_array[rankx] = MPI.Isend(
             view(send_counts, rankx:rankx),
             neighbour_ranks_send[rankx],
             rank,
@@ -398,10 +401,12 @@ function neighbour_transfer_to_rank(particle_group)
 
     # send particles
     offset = 1
+    sx_count = num_ranks_send
     for rankx in 1:num_ranks_send
         rankx_send_count = send_counts[rankx] * bytes_per_particle
         if (rankx_send_count > 0)
-            MPI.Isend(
+            sx_count += 1
+            send_array[sx_count] = MPI.Isend(
                 view(send_buffer, offset:offset+rankx_send_count-1),
                 neighbour_ranks_send[rankx],
                 rank,
@@ -419,6 +424,9 @@ function neighbour_transfer_to_rank(particle_group)
 
     # Unpack the recvd data
     unpack_particle_dats(particle_group, recv_count, recv_buffer)
+
+    # wait for all sends to complete before returning
+    MPI.Waitall!(send_array[1:sx_count])
 
 end
 
@@ -487,20 +495,20 @@ function global_transfer_to_rank(particle_group)
         # unlock remote rank on window
         MPI.Win_unlock(ranki, recv_win)
     end
-    # The Barrier for this remote access is after this allocation purely
-    # in the hope that the allocation/pack can happen whilst the Get_accumulate
-    # occurs.
     
+    # Start the barrier for the recv counts
+    barrier_request = MPI.Ibarrier(comm)
+
     # Pack the data to send
     bytes_per_particle = sizeof_particle(particle_group)
     send_buffer = Array{Cchar}(undef, (bytes_per_particle, send_total_count))
     pack_particle_dats(particle_group, rank_to_indices_map, send_buffer)
 
-    # Barrier for the send counts/acculation access
-    MPI.Barrier(comm)
+    # Barrier for the send counts/accumulation access
+    MPI.Wait!(barrier_request)
+
     # Allocate space for the data we are about to recv
     recv_count = recv_counts[1]
-    #recv_buffer = Array{Cchar}(undef, (bytes_per_particle, recv_count))
     recv_buffer = zeros(Cchar, (bytes_per_particle, recv_count))
     recv_data_win = MPI.Win_create(recv_buffer, comm)
 
@@ -529,13 +537,15 @@ function global_transfer_to_rank(particle_group)
         # unlock remote rank on window
         MPI.Win_unlock(ranki, recv_data_win)
     end
-    
+
+    # Barrier for the Put operations
+    barrier_request = MPI.Ibarrier(comm)
 
     # remove the particles that were sent
     remove_particles(particle_group, indices_to_send)
 
-    # Barrier for the Put operations
-    MPI.Barrier(comm)
+    # wait for all data to be recvd before unpacking
+    MPI.Wait!(barrier_request)
     
     # Unpack the recvd data
     unpack_particle_dats(particle_group, recv_count, recv_buffer)
@@ -543,7 +553,9 @@ function global_transfer_to_rank(particle_group)
     # Free accumulation window
     MPI.free(recv_win)
     MPI.free(recv_data_win)
-
+    
+    # Transfer particles that were not sent with the global send
+    neighbour_transfer_to_rank(particle_group)
 end
 
 
@@ -558,8 +570,6 @@ function global_move(particle_group)
     execute(particle_group.position_to_rank_task)
     # Transfer ownership to the new ranks
     global_transfer_to_rank(particle_group)
-
-    neighbour_transfer_to_rank(particle_group)
 
 end
 
