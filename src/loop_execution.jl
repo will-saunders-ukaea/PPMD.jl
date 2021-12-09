@@ -23,15 +23,19 @@ is of type Task.
 """
 function run_task(task)
 
-    if typeof(task) <: Task
-        t = @elapsed begin
-            task.execute()
-        end
-        task.runtime += t
-        task.call_count += 1
-    else
+    t = @elapsed begin
         task.execute()
     end
+    
+    name = "anon_run_task"
+    if typeof(task) <: Task
+        task.runtime += t
+        task.call_count += 1
+        name = task.name
+    end
+
+    increment_profiling_value(name, "time" , t)
+    increment_profiling_value(name, "count" , 1)
 
 end
 

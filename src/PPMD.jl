@@ -3,10 +3,16 @@ using MPI
 
 export ParticleLoop, KernelAbstractionsDevice, KACPU, KACUDADevice
 
+
+include("profiling.jl")
+
 function __init__()
     if !(MPI.Initialized())
         MPI.Init(finalize_atexit=true)
     end
+
+    # Set MPI vars in profile
+    reset_profile()
 end
 
 
@@ -26,7 +32,6 @@ end
 
 LOCAL_RANK = get_local_rank()
 
-include("profiling.jl")
 include("hash.jl")
 include("access.jl")
 include("kernel.jl")

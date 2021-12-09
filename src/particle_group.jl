@@ -109,7 +109,9 @@ This call should be collective across the domain communicator of the
 ParticleGroup.
 """
 function add_particles(group::ParticleGroup, particle_data::Dict=Dict())
-
+    time_start = time()
+    
+    
     if (!isempty(particle_data))
         # Check data has consistent sizes.
         N = -1
@@ -142,12 +144,14 @@ function add_particles(group::ParticleGroup, particle_data::Dict=Dict())
             append_particle_data(dat, new_data)
             @assert dat.npart_local == group.npart_local
         end
+        increment_profiling_value("add_particles", "npart", N)
     end
     
     # Move added particles to the correct owning rank
     # This is why add_particles is collective over the particle group
     global_move(group)
 
+    increment_profiling_value("add_particles", "time", time() - time_start)
 end
 
 
@@ -159,6 +163,7 @@ This call should be collective across the domain communicator of the
 ParticleGroup.
 """
 function remove_particles(group::ParticleGroup, indices)
+    time_start = time()
 
     npart_local = group.npart_local
     indices = Set(indices)
@@ -190,6 +195,9 @@ function remove_particles(group::ParticleGroup, indices)
         dat.second.version_id += 1
     end
     group.npart_local = new_npart_local
+
+    increment_profiling_value("remove_particles", "time", time() - time_start)
+    increment_profiling_value("remove_particles", "npart", N_remove)
 
 end
 
@@ -310,7 +318,8 @@ Send particles to owning rank assuming that the destination ranks are "local"
 neighbours.
 """
 function neighbour_transfer_to_rank(particle_group)
-    
+    time_start = time()
+
     if !(particle_group.neighbour_exchange_ranks.init)
         return
     end
@@ -442,7 +451,10 @@ function neighbour_transfer_to_rank(particle_group)
     # wait for all sends to complete before returning
     MPI.Waitall!(send_requests_particle_data[1:sx_count])
 
-    #@show "NEIGHBOUR", send_total_count, recv_count
+    name = "neighbour_transfer_to_rank"
+    increment_profiling_value(name, "time", time() - time_start)
+    increment_profiling_value(name, "recv_count", recv_count)
+    increment_profiling_value(name, "send_count", send_total_count)
 end
 
 
@@ -453,6 +465,7 @@ transfer. Uses MPI RMA for all transfers that cannot be performed with
 neighbour based comms.
 """
 function global_transfer_to_rank_rma(particle_group)
+    time_start = time()
     
     # get the owning ranks
     owning_ranks = get_owning_ranks(particle_group)
@@ -575,7 +588,10 @@ function global_transfer_to_rank_rma(particle_group)
     # Transfer particles that were not sent with the global send
     neighbour_transfer_to_rank(particle_group)
 
-    #@show "GLOBAL RMA", send_total_count, recv_count
+    name = "global_transfer_to_rank_rma"
+    increment_profiling_value(name, "time", time() - time_start)
+    increment_profiling_value(name, "recv_count", recv_count)
+    increment_profiling_value(name, "send_count", send_total_count)
 end
 
 
@@ -586,7 +602,8 @@ transfer. Uses MPI RMA for all transfers that cannot be performed with
 neighbour based comms.
 """
 function global_transfer_to_rank(particle_group)
-    
+    time_start = time()
+
     # get the owning ranks
     owning_ranks = get_owning_ranks(particle_group)
     
@@ -737,6 +754,11 @@ function global_transfer_to_rank(particle_group)
     neighbour_transfer_to_rank(particle_group)
 
     #@show "GLOBAL S/R", send_total_count, recv_count
+    
+    name = "global_transfer_to_rank"
+    increment_profiling_value(name, "time", time() - time_start)
+    increment_profiling_value(name, "recv_count", recv_count)
+    increment_profiling_value(name, "send_count", send_total_count)
 end
 
 

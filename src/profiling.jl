@@ -1,6 +1,4 @@
-export print_profile, set_profiling_value, increment_profiling_value
-
-using MPI
+export print_profile, set_profiling_value, increment_profiling_value, reset_profile
 
 
 """
@@ -67,11 +65,6 @@ function increment_profiling_value(key1, key2, value)
 end
 
 
-# Set MPI vars.
-set_profiling_value("MPI", "MPI_COMM_WORLD_rank", MPI.Comm_rank(MPI.COMM_WORLD))
-set_profiling_value("MPI", "MPI_COMM_WORLD_size", MPI.Comm_size(MPI.COMM_WORLD))
-
-
 """
 Function to print a profile using show.
 """
@@ -94,6 +87,18 @@ Helper to print the profile.
 function print_profile()
     @show PROFILE
 end
+
+
+"""
+Function to reset global profiling data collection.
+"""
+function reset_profile()
+    global PROFILE = ProfileDat()
+    set_profiling_value("MPI", "MPI_COMM_WORLD_rank", MPI.Comm_rank(MPI.COMM_WORLD))
+    set_profiling_value("MPI", "MPI_COMM_WORLD_size", MPI.Comm_size(MPI.COMM_WORLD))
+end
+
+
 
 
 
