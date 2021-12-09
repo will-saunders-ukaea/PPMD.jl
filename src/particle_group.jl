@@ -484,6 +484,7 @@ function global_transfer_to_rank_rma(particle_group)
     # Buffer for accumulation window
     recv_counts = zeros(Cint, 1)
     # Create MPI Window for acculation of counts
+    # TODO potentially not portable as memory not allocated with MPI_Alloc_mem
     recv_win = MPI.Win_create(recv_counts, comm)
     # Create local buffer for remote offsets
     send_offsets = zeros(Cint, num_remote_ranks)
@@ -526,6 +527,7 @@ function global_transfer_to_rank_rma(particle_group)
     # Allocate space for the data we are about to recv
     recv_count = recv_counts[1]
     recv_buffer = zeros(Cchar, (bytes_per_particle, recv_count))
+    # TODO potentially not portable as memory not allocated with MPI_Alloc_mem
     recv_data_win = MPI.Win_create(recv_buffer, comm)
 
     # loop over ranks and Put the data in remote buffers
@@ -615,6 +617,7 @@ function global_transfer_to_rank(particle_group)
     # Buffer for accumulation window
     recv_counts = zeros(Cint, 1)
     # Create MPI Window for acculation of MPI rank counts
+    # TODO potentially not portable as memory not allocated with MPI_Alloc_mem
     recv_win = MPI.Win_create(recv_counts, comm)
     send_counts = zeros(Cint, num_remote_ranks)
 

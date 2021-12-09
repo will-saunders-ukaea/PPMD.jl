@@ -37,6 +37,7 @@ function exchange_neighbour_ranks(particle_group, neighbour_ranks::Array{Cint})
     # for each remote rank increment the remote counter to find the remote offset
     # for this rank to place its rank in the remote buffer
     recv_counts = zeros(Cint, 1)
+    # TODO potentially not portable as memory not allocated with MPI_Alloc_mem
     recv_win = MPI.Win_create(recv_counts, comm)
     remote_offsets = Array{Cint}(undef, N_remote_ranks)
     Cint_one = ones(Cint, 1)
@@ -58,6 +59,7 @@ function exchange_neighbour_ranks(particle_group, neighbour_ranks::Array{Cint})
     
     # allocate space and an MPI Window for the remote ranks
     sending_ranks = Array{Cint}(undef, recv_counts[1])
+    # TODO potentially not portable as memory not allocated with MPI_Alloc_mem
     sending_ranks_win = MPI.Win_create(sending_ranks, comm)
 
     # reuse this temp array to send the rank
