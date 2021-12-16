@@ -42,6 +42,7 @@ end
 Write a vtp file per rank for the current particle state.
 """
 function Base.write(pgvtk::ParticleGroupVTK)
+    time_start = time()
 
     filename = "$(pgvtk.filename)_$(pgvtk.rank)_$(pgvtk.step)"
     pgvtk.step += 1
@@ -62,6 +63,11 @@ function Base.write(pgvtk::ParticleGroupVTK)
     end
     
     outfile = vtk_save(vtkfile)
+    
+    name = "ParticleGroupVTK-" * pgvtk.filename
+    increment_profiling_value(name, "time" , time() - time_start)
+    increment_profiling_value(name, "count" , 1)
+
     return outfile
 end
 
