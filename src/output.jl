@@ -49,6 +49,7 @@ function Base.write(pgvtk::ParticleGroupVTK)
     
     # Create a unstructured grid with vertex per particle.
     npart_local = pgvtk.particle_group.npart_local
+
     vtkfile = vtk_grid(
         filename,
         transpose(pgvtk.particle_group[pgvtk.particle_group.position_dat][:, :]),
@@ -59,7 +60,7 @@ function Base.write(pgvtk::ParticleGroupVTK)
     
     # Write the ParticleDat data to each vertex.
     for datx in pgvtk.particle_dats
-        vtkfile[datx, VTKPointData()] = pgvtk.particle_group[datx][:,:]
+        vtkfile[datx, VTKPointData()] = transpose(pgvtk.particle_group[datx][:,:])
     end
     
     outfile = vtk_save(vtkfile)

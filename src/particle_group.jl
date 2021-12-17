@@ -2,7 +2,7 @@ export ParticleGroup, add_particles, remove_particles, getindex, initialise_part
 
 using MPI
 using DataStructures
-
+using PrettyTables
 
 """
 Add a ParticleDat to a ParticleGroup.
@@ -790,4 +790,41 @@ function global_move_rma(particle_group)
     global_transfer_to_rank_rma(particle_group)
 
 end
+
+
+"""
+Pretty(ish) printing of ParticleGroups (slow - intended for debugging).
+"""
+function Base.show(io::IO, particle_group::ParticleGroup)
+    print(io, "\n")
+
+    N = particle_group.npart_local
+    
+    data_titles = Stack{String}()
+
+    for datx in particle_group.particle_dats
+        name = datx.first
+        ncomp = datx.second.ncomp
+        
+        for compx in 1:ncomp
+            push!(data_titles, name * "_" * string(compx))
+        end
+
+    end
+    
+    data_columns = hcat([convert(Array{Any}, datx.second[1:N, :]) for datx in particle_group.particle_dats]...)
+    data_titles = [tx for tx in Iterators.reverse(data_titles)]
+    pretty_table(io, data_columns, data_titles)
+
+end
+
+
+
+
+
+
+
+
+
+
 
