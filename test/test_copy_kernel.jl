@@ -61,5 +61,6 @@ using LinearAlgebra
     @test norm(A["A"][:, 1]       - A["B"][:, 1], Inf) < 1E-14
     @test norm(A["A"][:, 1] * 2.0 - A["B"][:, 2], Inf) < 1E-14
     @test norm(A["A"][:, 1] * 3.0 - A["B"][:, 3], Inf) < 1E-14
-
+    
+    free(A)
 end

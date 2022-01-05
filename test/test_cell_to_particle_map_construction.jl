@@ -63,5 +63,6 @@ CUDA.allowscalar(true)
     end
 
     @test npart_seen == A.npart_local
-
+    
+    free(A)
 end

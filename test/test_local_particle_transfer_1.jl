@@ -58,5 +58,5 @@ using Random
         @test norm(A["IDA"][:, 1] - A["IDB"][:, 1], Inf) == 0
     end
 
-    
+    free(A)   
 end

@@ -59,5 +59,6 @@ CUDA.allowscalar(true)
         
         @test cell == cell_indices[px, 1]
     end
-
+    
+    free(A)
 end

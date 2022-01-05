@@ -45,6 +45,7 @@ using LinearAlgebra
 
     execute(loop)
 
-    @test norm(A["P"][:, :] .- A["PI"][:, :], Inf) < 1E-14
+    @test norm(A["P"][:, :] .- A["PI"][:, :], Inf) < 2E-14
 
+    free(A)
 end

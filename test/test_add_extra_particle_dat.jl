@@ -34,5 +34,6 @@ using MPI
 
     @test A["C"].npart_local == A["P"].npart_local
     @test size(A["P"][:, :])[1] == size(A["C"][:, :])[1]
-
+    
+    free(A)
 end

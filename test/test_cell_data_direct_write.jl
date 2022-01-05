@@ -64,5 +64,6 @@ using MPI
     for cx in 1:6
         @test abs(C[cx, 1] - A.npart_local * cdata[cx]) < 1E-14
     end
-
+    
+    free(A)
 end

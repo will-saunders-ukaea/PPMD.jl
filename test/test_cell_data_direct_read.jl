@@ -61,5 +61,6 @@ using MPI
     for px in 1:A.npart_local
         @test norm(A["A"][px, :] .- cdata, Inf) < 1E-14
     end
-
+    
+    free(A)
 end

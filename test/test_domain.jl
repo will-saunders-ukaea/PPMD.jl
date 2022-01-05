@@ -14,7 +14,5 @@ using Test
     @test domain.extent[2] == 2.0
     @test domain.extent[3] == 3.0
     @test domain.boundary_condition == boundary_condition
-
+    
 end
-
-

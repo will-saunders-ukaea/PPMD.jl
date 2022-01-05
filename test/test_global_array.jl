@@ -55,5 +55,6 @@ using LinearAlgebra
 
     execute(loop)
     @test norm(A["A"][:, 1] .- C[1], Inf) < 1E-14
-
+    
+    free(A)
 end

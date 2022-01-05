@@ -72,5 +72,6 @@ using LinearAlgebra
         @test rank == p_rank
 
     end
-
+    
+    free(A)
 end

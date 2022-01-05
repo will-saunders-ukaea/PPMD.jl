@@ -1,4 +1,4 @@
-export ParticleGroup, add_particles, remove_particles, getindex, initialise_particle_group_move, global_transfer_to_rank, add_particle_dat, global_move, global_move_rma
+export ParticleGroup, add_particles, remove_particles, getindex, initialise_particle_group_move, global_transfer_to_rank, add_particle_dat, global_move, global_move_rma, free
 
 using MPI
 using DataStructures
@@ -34,6 +34,7 @@ mutable struct ParticleGroup
     position_dat::String
     maps::Dict
     neighbour_exchange_ranks::NeighbourExchangeRanks
+    transfer_count_win::Win
 
     function ParticleGroup(domain, particle_dats, compute_target=false)
         new_particle_group = new(domain, OrderedDict(), compute_target, 0, false, false)
@@ -63,9 +64,21 @@ mutable struct ParticleGroup
 
         new_particle_group.maps = Dict()
         new_particle_group.neighbour_exchange_ranks = NeighbourExchangeRanks()
+        
+        # MPI Win in which particle counts can be accumulated.
+        new_particle_group.transfer_count_win = Win(domain.comm, 1, Cint)
 
         return new_particle_group
     end
+end
+
+
+"""
+Manually free a ParticleGroup
+"""
+function free(particle_group::ParticleGroup)
+    # the MPI Win must be freed collectively on the comm
+    free(particle_group.transfer_count_win)
 end
 
 
@@ -614,6 +627,20 @@ function global_transfer_to_rank(particle_group)
     @assert length(filter((x) -> x < 0, owning_ranks)) == 0
     @assert length(filter((x) -> x > size, owning_ranks)) == 0
 
+    # Buffer for accumulation window
+    recv_counts = particle_group.transfer_count_win.buffer
+    recv_counts[1] = 0
+
+    # The Win comm should be the particle group comm
+    @assert MPI.Comm_compare(particle_group.transfer_count_win.comm, comm) == MPI.IDENT
+
+    # ensure the recv counts are zeroed before a remote rank writes to the 
+    # address
+    barrier_request = MPI.Ibarrier(comm)
+
+    # Get MPI Window for acculation of MPI rank counts
+    recv_win = particle_group.transfer_count_win.win
+
     # indices of all escapee particles
     escapee_indices = findall((x) -> x != rank, owning_ranks)
     
@@ -631,11 +658,9 @@ function global_transfer_to_rank(particle_group)
     num_remote_ranks = length(rank_to_indices_map)
     remote_ranks = [rx for rx in keys(rank_to_indices_map)]
 
-    # Buffer for accumulation window
-    recv_counts = zeros(Cint, 1)
-    # Create MPI Window for acculation of MPI rank counts
-    # TODO potentially not portable as memory not allocated with MPI_Alloc_mem
-    recv_win = MPI.Win_create(recv_counts, comm)
+    # wait for all accumulate buffers to be zeroed.
+    MPI.Wait!(barrier_request)
+
     send_counts = zeros(Cint, num_remote_ranks)
 
     # loop over ranks to transfer to
@@ -673,8 +698,6 @@ function global_transfer_to_rank(particle_group)
 
     # Barrier for the send counts/accumulation access
     MPI.Wait!(barrier_request)
-    # Free accumulation window
-    MPI.free(recv_win)
 
     num_ranks_recv = recv_counts[1]
     # array to hold the number of particles the remote rank will send
@@ -752,8 +775,6 @@ function global_transfer_to_rank(particle_group)
     
     # Transfer particles that were not sent with the global send
     neighbour_transfer_to_rank(particle_group)
-
-    #@show "GLOBAL S/R", send_total_count, recv_count
     
     name = "global_transfer_to_rank"
     increment_profiling_value(name, "time", time() - time_start)

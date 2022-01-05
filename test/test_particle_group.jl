@@ -131,21 +131,5 @@ using MPI
 
     @assert A.npart_local == 0
 
-
+    free(A)
 end
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

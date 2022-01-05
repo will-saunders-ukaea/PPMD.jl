@@ -32,6 +32,7 @@ end
 
 LOCAL_RANK = get_local_rank()
 
+include("mpi_utility.jl")
 include("hash.jl")
 include("access.jl")
 include("kernel.jl")

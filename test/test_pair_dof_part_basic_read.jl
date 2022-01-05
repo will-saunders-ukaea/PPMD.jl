@@ -77,5 +77,5 @@ CUDA.allowscalar(true)
         @test abs(correct - to_test) < 1E-12
     end
 
-
+    free(A)
 end

@@ -68,5 +68,6 @@ using MPI
 
     @test abs(C[1] - 2.0 * host_reduce[1]) < 1E-12
     @test abs(C[2] - 4.0 * host_reduce[1]) < 1E-12
-
+    
+    free(A)
 end

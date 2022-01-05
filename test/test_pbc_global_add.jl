@@ -50,5 +50,5 @@ using LinearAlgebra
         @test minimum(A["P"][:, dx] .- upper) <= 0
     end
 
-
+    free(A)
 end

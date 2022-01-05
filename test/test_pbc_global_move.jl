@@ -143,8 +143,6 @@ end
             end
         end
     end
-
+    
+    free(A)
 end
-
-
-

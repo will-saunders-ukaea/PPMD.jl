@@ -84,5 +84,6 @@ CUDA.allowscalar(true)
     for cellx in 1:mesh.cell_count
         @test norm(CD_B[cellx, :, 1] - correct_array[cellx, :], Inf) < 1E-12
     end
-
+    
+    free(A)
 end
