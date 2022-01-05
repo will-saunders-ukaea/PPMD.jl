@@ -617,26 +617,26 @@ neighbour based comms.
 function global_transfer_to_rank(particle_group)
     time_start = time()
 
-    # get the owning ranks
-    owning_ranks = get_owning_ranks(particle_group)
-    
-    comm = particle_group.domain.comm
-    rank = MPI.Comm_rank(comm)
-    size = MPI.Comm_size(comm)
-
-    @assert length(filter((x) -> x < 0, owning_ranks)) == 0
-    @assert length(filter((x) -> x > size, owning_ranks)) == 0
-
     # Buffer for accumulation window
     recv_counts = particle_group.transfer_count_win.buffer
     recv_counts[1] = 0
 
+    comm = particle_group.domain.comm
     # The Win comm should be the particle group comm
     @assert MPI.Comm_compare(particle_group.transfer_count_win.comm, comm) == MPI.IDENT
 
     # ensure the recv counts are zeroed before a remote rank writes to the 
     # address
     barrier_request = MPI.Ibarrier(comm)
+
+    # get the owning ranks
+    owning_ranks = get_owning_ranks(particle_group)
+    
+    rank = MPI.Comm_rank(comm)
+    size = MPI.Comm_size(comm)
+
+    @assert length(filter((x) -> x < 0, owning_ranks)) == 0
+    @assert length(filter((x) -> x > size, owning_ranks)) == 0
 
     # Get MPI Window for acculation of MPI rank counts
     recv_win = particle_group.transfer_count_win.win
