@@ -1,4 +1,4 @@
-export rand_within_extents, get_subdomain_bounds, get_neighbour_ranks 
+export rand_within_extents, get_subdomain_bounds, get_neighbour_ranks, get_stencil_width
 
 using Random
 
@@ -37,7 +37,8 @@ end
 
 
 """
-Get the MPI ranks within a certain offset size on the cart comm of a StructuredCartesianDomain.
+Get the MPI ranks within a certain offset size on the cart comm of a
+StructuredCartesianDomain.
 """
 function get_neighbour_ranks(domain::StructuredCartesianDomain, stencil_width::Int64)::Array{Cint}
     
@@ -75,3 +76,32 @@ function get_neighbour_ranks(domain::StructuredCartesianDomain, stencil_width::I
 
     return ranks_array
 end
+
+
+"""
+Get the stencil width (the number of MPI ranks) required to cover a halo of a
+given width.
+"""
+function get_stencil_width(domain::StructuredCartesianDomain, width)::Int64
+    width = Float64(width)
+    
+    ndim = domain.ndim
+
+    min_width = prevfloat(typemax(Float64))
+    for dx in 1:ndim
+        l, u = get_subdomain_bounds(domain, dx)
+        w = u - l
+        @assert w > 0.0
+        min_width = min(min_width, w)
+    end
+
+    stencil_width = max(1, Int64(ceil(width / min_width)))
+
+    return stencil_width
+
+end
+
+
+
+
+

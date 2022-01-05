@@ -1,4 +1,4 @@
-export print_profile, set_profiling_value, increment_profiling_value, reset_profile
+export print_profile, set_profiling_value, increment_profiling_value, reset_profile, get_profile_dict
 
 
 """
@@ -99,6 +99,11 @@ function reset_profile()
 end
 
 
-
+"""
+Get the profiling data dict
+"""
+function get_profile_dict()
+    return PROFILE.data
+end
 
 
