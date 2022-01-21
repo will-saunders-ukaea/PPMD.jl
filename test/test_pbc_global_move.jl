@@ -35,7 +35,8 @@ function check_in_bounds(pos, bounds, tol=1E-12)
 end
 
 
-@testset "PBC global_move $spec" for spec in Iterators.product((KACPU(), KACUDADevice()), (1, 2, 3), (global_move, global_move_rma), (0, 1))
+#@testset "PBC global_move $spec" for spec in Iterators.product((KACPU(), KACUDADevice()), (1, 2, 3), (global_move, global_move_rma), (0, 1))
+@testset "PBC global_move $spec" for spec in Iterators.product((KACPU(), KACUDADevice()), (1, 2, 3), (global_move, ), (0, 1))
 #@testset "PBC global_move $spec" for spec in Iterators.product((KACUDADevice(),), (1, 2, 3), (global_move, global_move_rma), (0, 1))
 
     target_device = spec[1]

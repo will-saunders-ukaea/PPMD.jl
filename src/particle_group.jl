@@ -744,7 +744,7 @@ function global_transfer_to_rank(particle_group)
         recv_requests[rankx] = MPI.Irecv!(
             view(recv_buffer, offset:offset+rankx_recv_count-1),
             neighbour_ranks_recv[rankx],
-            neighbour_ranks_recv[rankx],
+            42,
             comm
         )
         offset += rankx_recv_count
@@ -759,7 +759,7 @@ function global_transfer_to_rank(particle_group)
         send_requests_particle_data[rankx] = MPI.Isend(
             view(send_buffer, offset:offset+rankx_send_count-1),
             remote_ranks[rankx],
-            rank,
+            42,
             comm
         )
         offset += rankx_send_count

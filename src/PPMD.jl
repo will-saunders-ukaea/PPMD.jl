@@ -3,7 +3,6 @@ using MPI
 
 export ParticleLoop, KernelAbstractionsDevice, KACPU, KACUDADevice
 
-
 include("profiling.jl")
 
 function __init__()
