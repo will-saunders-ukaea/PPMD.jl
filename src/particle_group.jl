@@ -381,7 +381,7 @@ function neighbour_transfer_to_rank(particle_group)
         recv_array[rankx] = MPI.Irecv!(
             view(recv_counts, rankx:rankx),
             neighbour_ranks_recv[rankx],
-            neighbour_ranks_recv[rankx],
+            43,
             comm
         )
     end
@@ -396,7 +396,7 @@ function neighbour_transfer_to_rank(particle_group)
         send_requests[rankx] = MPI.Isend(
             view(send_counts, rankx:rankx),
             neighbour_ranks_send[rankx],
-            rank,
+            43,
             comm
         )
         send_total_count += send_counts[rankx]
