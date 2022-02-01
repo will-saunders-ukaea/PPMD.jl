@@ -17,12 +17,19 @@ end
 
 # Try to determine the local rank on each node
 function get_local_rank()
-
+    
+    # OpenMPI
     if ((local_rank=parse(Int64, get(ENV, "OMPI_COMM_WORLD_LOCAL_RANK", "-1"))) > -1) 
         return local_rank
     end
-
+    
+    # MPICH2
     if ((local_rank=parse(Int64, get(ENV, "MV2_COMM_WORLD_LOCAL_RANK", "-1"))) > -1) 
+        return local_rank
+    end
+
+    # IBM? also set (sometimes?) by Intel MPI
+    if ((local_rank=parse(Int64, get(ENV, "MPI_LOCALRANKID", "-1"))) > -1) 
         return local_rank
     end
     
