@@ -21,13 +21,15 @@ end
 
 struct KACUDADevice <: KernelAbstractionsDevice
     device
+    device_id
     workgroup_size::Int64
     ArrayType
     function KACUDADevice(workgroup_size=32)
         if CUDA.functional()
             # set the device round robin on local mpi rank
-            CUDA.device!(LOCAL_RANK % length(CUDA.devices()))
-            return new(CUDADevice(), workgroup_size, CuArray)
+            device_id = LOCAL_RANK % length(CUDA.devices())
+            CUDA.device!(device_id)
+            return new(CUDADevice(), device_id, workgroup_size, CuArray)
         else
             println("Warning CUDA.functional returned false, using CPU.")
             return KACPU()
