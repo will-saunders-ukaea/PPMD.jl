@@ -105,6 +105,9 @@ using MPI
     npart_local = A.npart_local
     npart_left = npart_local
 
+    remove_particles(A, [])
+    @test A.npart_local == npart_local
+
     while (npart_left > 0)
         
         npart_to_remove = rand(rng, 1:npart_left)

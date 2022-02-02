@@ -187,6 +187,7 @@ function remove_particles(group::ParticleGroup, indices)
     end
     
     N_remove = length(indices)
+
     npart_local = group.npart_local
     new_npart_local = npart_local - N_remove
     @assert new_npart_local >= 0
@@ -200,13 +201,16 @@ function remove_particles(group::ParticleGroup, indices)
     
     # copy the particle data from the end of the particledat into the newly
     # vacated slots.
+    #
+    indices = [ix for ix in indices]
     for dat in group.particle_dats
-        for ix in zip(indices, to_move)
-            dat.second.data[ix[1], :] = dat.second.data[ix[2], :]
+        if N_remove > 0
+            dat.second.data[indices, :] .= dat.second.data[to_move, :]
+            dat.second.npart_local = new_npart_local
         end
-        dat.second.npart_local = new_npart_local
         dat.second.version_id += 1
     end
+
     group.npart_local = new_npart_local
 
     increment_profiling_value("remove_particles", "time", time() - time_start)
@@ -252,26 +256,30 @@ Pack particle data for sending as Cchar for global move
 function pack_particle_dats(particle_group, rank_to_indices_map, send_buffer)
     
     packing_start_end = Dict()
-
     bytes_per_particle = sizeof_particle(particle_group)
+
+    indices_to_pack = vcat(
+        [[sx for sx in rank_to_indices_map[rankx]] for rankx in keys(rank_to_indices_map)]...
+    )
+    
     column_index = 0
     for rankx in keys(rank_to_indices_map)
-
         rank_start = column_index * bytes_per_particle + 1
-        for particle in rank_to_indices_map[rankx]
-            column_index += 1
-            row_index = 1
-            for datx in particle_group.particle_dats
-                ncomp = datx.second.ncomp
-                stride = ncomp * sizeof(datx.second.dtype)
-                send_buffer[row_index:row_index+stride-1, column_index] .= 
-                    reinterpret(Cchar, datx.second[particle, 1:ncomp])
-                row_index += stride
-            end
-        end
+        column_index += length(rank_to_indices_map[rankx])
         rank_end = column_index * bytes_per_particle
         packing_start_end[rankx] = (rank_start, rank_end)
-
+    end
+    
+    if length(indices_to_pack) > 0
+        row_index = 1
+        for datx in particle_group.particle_dats
+            ncomp = datx.second.ncomp
+            stride = ncomp * sizeof(datx.second.dtype)
+            send_buffer[row_index:row_index+stride-1, :] .= reinterpret(
+                Cchar, transpose(datx.second[indices_to_pack, 1:ncomp])
+            )
+            row_index += stride
+        end
     end
 
     return packing_start_end
