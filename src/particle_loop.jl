@@ -337,20 +337,16 @@ function ParticleLoop(
  
         # alternatively this could return the event to such that multiple
         # kernels can be launched in parallel?
-        print("\texecute_pre")
         wait(event)
-        print("\texecute_post")
         t1 = time_ns()
         l.runtime_inner += Float64(t1 - t0) * 1E-9
 
         # handle any post loop procedures
-        #
         for px in zip(args, call_args)
 
             post_loop(N, px[1].first, px[1].second[1], px[1].second[2], target, px[2])
         end
    
-        print("\texecute_post_args")
     end
     
     l.execute = loop_wrapper
