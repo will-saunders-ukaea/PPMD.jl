@@ -1,4 +1,4 @@
-export ParticleGroup, add_particles, remove_particles, getindex, initialise_particle_group_move, global_transfer_to_rank, add_particle_dat, global_move, global_move_rma, free
+export ParticleGroup, add_particles, remove_particles, getindex, initialise_particle_group_move, global_transfer_to_rank, add_particle_dat, global_move, free
 
 using MPI
 using DataStructures
@@ -125,6 +125,7 @@ function add_particles(group::ParticleGroup, particle_data::Dict=Dict())
     time_start = time()
     
     
+    println("PRE ADD")
     if (!isempty(particle_data))
         # Check data has consistent sizes.
         N = -1
@@ -142,24 +143,35 @@ function add_particles(group::ParticleGroup, particle_data::Dict=Dict())
 
         end
         
+        println("PRE DAT LOOP")
         group.npart_local += N
         for dx in group.particle_dats
             dat = dx.second
 
             # expand the particle dat storage to allocate space for the new
             # particles
+            println("1")
             grow_particle_dat(dat, N + size(dat.data)[1])
+
+            println("2")
             if (dx.first in keys(particle_data))
                 new_data = particle_data[dx.first]
             else
                 new_data = zeros(dat.dtype, (N, dat.ncomp))
             end
+
+            println("3")
             append_particle_data(dat, new_data)
+            println("4")
             @assert dat.npart_local == group.npart_local
         end
+
+        println("5")
         increment_profiling_value("add_particles", "npart", N)
     end
     
+    println("PRE GLOBAL")
+
     # Move added particles to the correct owning rank
     # This is why add_particles is collective over the particle group
     global_move(group)
@@ -418,7 +430,13 @@ function neighbour_transfer_to_rank(particle_group)
     rank_to_offset_map = pack_particle_dats(particle_group, rank_to_indices_map, send_buffer)
 
     # wait for the recv counts
-    MPI.Waitall!(recv_array)
+    println("neighbour wait 1")
+    check_mpi_error(MPI.Waitall!(recv_array))
+    if num_ranks_recv > 0
+        @show (minimum(recv_counts), maximum(recv_counts))
+    else
+        @show "no sending ranks"
+    end
 
     # allocate recv buffer
     recv_count = sum(recv_counts)
@@ -441,7 +459,8 @@ function neighbour_transfer_to_rank(particle_group)
         end
     end
 
-    MPI.Waitall!(send_requests)
+    check_mpi_error(MPI.Waitall!(send_requests))
+    println("Wait 450")
 
     # send particles
     sx_count = 0
@@ -464,13 +483,14 @@ function neighbour_transfer_to_rank(particle_group)
     remove_particles(particle_group, indices_to_send)
 
     # TODO could unpack these in turn as the recv completes?
-    MPI.Waitall!(recv_array[1:rx_count])
+    check_mpi_error(MPI.Waitall!(recv_array[1:rx_count]))
+    println("Wait 474")
 
     # Unpack the recvd data
     unpack_particle_dats(particle_group, recv_count, recv_buffer)
 
     # wait for all sends to complete before returning
-    MPI.Waitall!(send_requests_particle_data[1:sx_count])
+    check_mpi_error(MPI.Waitall!(send_requests_particle_data[1:sx_count]))
 
     name = "neighbour_transfer_to_rank"
     increment_profiling_value(name, "time", time() - time_start)
@@ -485,144 +505,8 @@ Does not require any restrictions on the destination ranks, i.e. an any-to-any
 transfer. Uses MPI RMA for all transfers that cannot be performed with
 neighbour based comms.
 """
-function global_transfer_to_rank_rma(particle_group)
-    time_start = time()
-    
-    # get the owning ranks
-    owning_ranks = get_owning_ranks(particle_group)
-    
-    comm = particle_group.domain.comm
-    rank = MPI.Comm_rank(comm)
-    size = MPI.Comm_size(comm)
-
-    @assert length(filter((x) -> x < 0, owning_ranks)) == 0
-    @assert length(filter((x) -> x > size, owning_ranks)) == 0
-
-    # indices of all escapee particles
-    escapee_indices = findall((x) -> x != rank, owning_ranks)
-    
-    # Find the indices of particles which should be transferred
-    indices_to_send = get_non_neighbour_ids(
-        particle_group, 
-        escapee_indices, 
-        owning_ranks
-    )
-
-    # Get the corresponding destination ranks
-    dest_ranks = owning_ranks[indices_to_send]
-
-    rank_to_indices_map = map_elements_to_location(dest_ranks, indices_to_send)
-    num_remote_ranks = length(rank_to_indices_map)
-    remote_ranks = [rx for rx in keys(rank_to_indices_map)]
-
-    # Buffer for accumulation window
-    recv_counts = zeros(Cint, 1)
-    # Create MPI Window for acculation of counts
-    # TODO potentially not portable as memory not allocated with MPI_Alloc_mem
-    recv_win = MPI.Win_create(recv_counts, comm)
-    # Create local buffer for remote offsets
-    send_offsets = zeros(Cint, num_remote_ranks)
-    send_counts = zeros(Cint, num_remote_ranks)
-
-    # loop over ranks to transfer to
-    send_total_count = 0
-    for rankx in 1:num_remote_ranks
-        ranki = remote_ranks[rankx]
-        # lock remote rank for window in MPI_LOCK_SHARED
-        MPI.Win_lock(MPI.LOCK_SHARED, ranki, 0, recv_win)
-        # Get_accumulate counts (send this ranks count to go to remote rank and
-        # recv the remote offset)
-        send_count = length(rank_to_indices_map[ranki])
-        send_total_count += send_count
-        send_counts[rankx] = send_count
-        MPI.Get_accumulate(
-            view(send_counts, rankx:rankx),
-            view(send_offsets, rankx:rankx),
-            ranki, 
-            0, 
-            MPI.SUM,
-            recv_win
-        )
-        # unlock remote rank on window
-        MPI.Win_unlock(ranki, recv_win)
-    end
-    
-    # Start the barrier for the recv counts
-    barrier_request = MPI.Ibarrier(comm)
-
-    # Pack the data to send
-    bytes_per_particle = sizeof_particle(particle_group)
-    send_buffer = Array{Cchar}(undef, (bytes_per_particle, send_total_count))
-    pack_particle_dats(particle_group, rank_to_indices_map, send_buffer)
-
-    # Barrier for the send counts/accumulation access
-    MPI.Wait!(barrier_request)
-
-    # Allocate space for the data we are about to recv
-    recv_count = recv_counts[1]
-    recv_buffer = zeros(Cchar, (bytes_per_particle, recv_count))
-    # TODO potentially not portable as memory not allocated with MPI_Alloc_mem
-    recv_data_win = MPI.Win_create(recv_buffer, comm)
-
-    # loop over ranks and Put the data in remote buffers
-    send_offset = 1
-    for rankx in 1:num_remote_ranks
-        ranki = remote_ranks[rankx]
-        # lock remote rank for window in MPI_LOCK_SHARED
-        MPI.Win_lock(MPI.LOCK_SHARED, ranki, 0, recv_data_win)
-        # Get_accumulate counts (send this ranks count to go to remote rank and
-        # recv the remote offset)
-        send_count = send_counts[rankx]
-        
-        # deduce the target offset from the bytes per particle and the offset
-        target_disp = bytes_per_particle * send_offsets[rankx]
-
-        # put the packed data to send in the remote buffer
-        MPI.Put(
-            view(send_buffer, :, send_offset:send_offset+send_count-1),
-            ranki, 
-            target_disp, 
-            recv_data_win
-        )
-        send_offset += send_count
-
-        # unlock remote rank on window
-        MPI.Win_unlock(ranki, recv_data_win)
-    end
-
-    # Barrier for the Put operations
-    barrier_request = MPI.Ibarrier(comm)
-
-    # remove the particles that were sent
-    remove_particles(particle_group, indices_to_send)
-
-    # wait for all data to be recvd before unpacking
-    MPI.Wait!(barrier_request)
-    
-    # Unpack the recvd data
-    unpack_particle_dats(particle_group, recv_count, recv_buffer)
-    
-    # Free accumulation window
-    MPI.free(recv_win)
-    MPI.free(recv_data_win)
-    
-    # Transfer particles that were not sent with the global send
-    neighbour_transfer_to_rank(particle_group)
-
-    name = "global_transfer_to_rank_rma"
-    increment_profiling_value(name, "time", time() - time_start)
-    increment_profiling_value(name, "recv_count", recv_count)
-    increment_profiling_value(name, "send_count", send_total_count)
-end
-
-
-"""
-Transfer particle ownership to ranks specified in the _owning_rank ParticleDat.
-Does not require any restrictions on the destination ranks, i.e. an any-to-any
-transfer. Uses MPI RMA for all transfers that cannot be performed with
-neighbour based comms.
-"""
 function global_transfer_to_rank(particle_group)
+    println("global move start")
     time_start = time()
 
     # Buffer for accumulation window
@@ -635,7 +519,8 @@ function global_transfer_to_rank(particle_group)
 
     # ensure the recv counts are zeroed before a remote rank writes to the 
     # address
-    barrier_request = MPI.Ibarrier(comm)
+    # barrier_request = MPI.Ibarrier(comm)
+    MPI.Barrier(comm)
 
     # get the owning ranks
     owning_ranks = get_owning_ranks(particle_group)
@@ -667,7 +552,9 @@ function global_transfer_to_rank(particle_group)
     remote_ranks = [rx for rx in keys(rank_to_indices_map)]
 
     # wait for all accumulate buffers to be zeroed.
-    MPI.Wait!(barrier_request)
+    #println("L671 Barrier pre")
+    #MPI.Wait!(barrier_request)
+    #println("L671 Barrier post")
 
     send_counts = zeros(Cint, num_remote_ranks)
 
@@ -705,7 +592,10 @@ function global_transfer_to_rank(particle_group)
     remove_particles(particle_group, indices_to_send)
 
     # Barrier for the send counts/accumulation access
+    #
+    println("L719 Barrier pre")
     MPI.Wait!(barrier_request)
+    println("L719 Barrier post")
 
     num_ranks_recv = recv_counts[1]
     # array to hold the number of particles the remote rank will send
@@ -738,9 +628,11 @@ function global_transfer_to_rank(particle_group)
 
     # establish which remote rank corresponds to which recv count
     recv_status = MPI.Waitall!(recv_requests)
+    println("Wait 753")
     for rankx in 1:num_ranks_recv
         neighbour_ranks_recv[rankx] = recv_status[rankx].source
     end
+    check_mpi_error(recv_status)
     
     recv_count = sum(per_rank_recv_counts)
     recv_buffer = zeros(Cchar, (bytes_per_particle, recv_count))
@@ -758,7 +650,8 @@ function global_transfer_to_rank(particle_group)
         offset += rankx_recv_count
     end
 
-    MPI.Waitall!(send_requests)
+    check_mpi_error(MPI.Waitall!(send_requests))
+    println("Wait 776")
     # send particles
     send_requests_particle_data = Array{MPI.Request}(undef, num_remote_ranks)
     offset = 1
@@ -774,20 +667,27 @@ function global_transfer_to_rank(particle_group)
     end   
 
     # wait on the particle data
-    MPI.Waitall!(recv_requests)
+    check_mpi_error(MPI.Waitall!(recv_requests))
+    println("Wait 792")
 
     # unpack recvd particles
     unpack_particle_dats(particle_group, recv_count, recv_buffer)
 
-    MPI.Waitall!(send_requests_particle_data)
+    check_mpi_error(MPI.Waitall!(send_requests_particle_data))
+    println("Wait 798")
     
+    println("neighbour move start")
     # Transfer particles that were not sent with the global send
     neighbour_transfer_to_rank(particle_group)
+    println("neighbour move end")
     
     name = "global_transfer_to_rank"
     increment_profiling_value(name, "time", time() - time_start)
     increment_profiling_value(name, "recv_count", recv_count)
     increment_profiling_value(name, "send_count", send_total_count)
+
+    MPI.Barrier(comm)
+    println("global move end")
 end
 
 
@@ -795,28 +695,17 @@ end
 Send particles to correct owning rank. Is suitable for a global move.
 """
 function global_move(particle_group)
-    
     # Execute the ParticleLoop/Task that applies the boundary conditions
+    println("GM1")
     execute(particle_group.boundary_condition_task)
+    println("GM2")
     # Map the particle positions to MPI ranks
     execute(particle_group.position_to_rank_task)
     # Transfer ownership to the new ranks
+    println("GM3")
+    #Base.GC.enable(false)
     global_transfer_to_rank(particle_group)
-
-end
-
-
-"""
-Send particles to correct owning rank. Is suitable for a global move.
-"""
-function global_move_rma(particle_group)
-    
-    # Execute the ParticleLoop/Task that applies the boundary conditions
-    execute(particle_group.boundary_condition_task)
-    # Map the particle positions to MPI ranks
-    execute(particle_group.position_to_rank_task)
-    # Transfer ownership to the new ranks
-    global_transfer_to_rank_rma(particle_group)
+    #Base.GC.enable(true)
 
 end
 

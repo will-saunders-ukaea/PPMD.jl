@@ -101,20 +101,23 @@ function free(win::Win)
 end
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+"""
+Check MPI_Status error code is MPI.MPI_SUCCESS.
+"""
+function check_mpi_error(s::MPI.Status)
+    if s.error != MPI.MPI_SUCCESS
+        error("An MPI Status error code check failed.")
+    end
+end
+function check_mpi_error(s::Array{MPI.Status})
+    for sx in s
+        check_mpi_error(sx)
+    end
+end
+function check_mpi_error(s::Integer)
+    if s != MPI.MPI_SUCCESS
+        error("MPI error code was not MPI_SUCCESS. Error code $s.")
+    end
+end
 
 

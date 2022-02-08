@@ -7,8 +7,12 @@ include("profiling.jl")
 
 function __init__()
     if !(MPI.Initialized())
-        MPI.Init(finalize_atexit=true)
+        #MPI.Init(finalize_atexit=true)
+        MPI.Init_thread(MPI.THREAD_FUNNELED, finalize_atexit=true)
     end
+    @assert MPI.Query_thread() in [MPI.THREAD_FUNNELED, MPI.THREAD_SERIALIZED, MPI.THREAD_MULTIPLE]
+    #@assert MPI.Query_thread() == MPI.THREAD_MULTIPLE
+    
 
     # Set MPI vars in profile
     reset_profile()

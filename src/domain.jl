@@ -1,4 +1,4 @@
-export FullyPeroidicBoundary, StructuredCartesianDomain, get_boundary_condition_loop, get_position_to_rank_loop, get_position_to_rank_kernel, global_move
+export FullyPeroidicBoundary, StructuredCartesianDomain, get_boundary_condition_loop, get_position_to_rank_loop, get_position_to_rank_kernel, global_move, free
 
 using MPI
 
@@ -163,15 +163,14 @@ function get_position_to_rank_loop(particle_group)
 end
 
 
-
-
-
-
-
-
-
-
-
+"""
+Free a domain and the corresponding communicator. Should be called after all
+ParticleGroups that use this domain are freed. Must be called collectively on
+the domain communicator.
+"""
+function free(domain::StructuredCartesianDomain)
+    MPI.free(domain.comm)
+end
 
 
 

@@ -1,5 +1,5 @@
 export ParticleDat, getindex, setindex
-
+using Infiltrator
 using CUDA
 CUDA.allowscalar(true)
 
@@ -143,12 +143,25 @@ function append_particle_data(particle_dat, data)
         error("ParticleDat has insuffcient space.")
     end
     
+    println("3.5")
     npart_local = particle_dat.npart_local
     new_npart_local = particle_dat.npart_local + N
+    println("3.55")
+    @show particle_dat.data
+    #@infiltrate
+    println("3.56")
+    @show particle_dat.data[1:20, :]
+    #@show size(particle_dat.data[npart_local + 1: new_npart_local, :])
 
-    particle_dat.data[npart_local + 1: new_npart_local, :] = data
+    println("3.575")
+    particle_dat.data[npart_local + 1: new_npart_local, :] = data[:,:]
+
+    println("3.6")
     particle_dat.npart_local = new_npart_local
+
     particle_dat.version_id += 1
+
+    println("3.9")
 end
 
 
