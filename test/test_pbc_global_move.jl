@@ -3,6 +3,7 @@ using PPMD
 using Test
 using LinearAlgebra
 using Random
+using CUDA
 
 function vector_fmod(a, b)
     
@@ -38,8 +39,8 @@ end
 @testset "PBC global_move $spec" for spec in Iterators.product((KACPU(), KACUDADevice()), (1, 2, 3), (global_move, ), (0, 1))
 #@testset "PBC global_move $spec" for spec in Iterators.product((KACUDADevice(),), (1, 2, 3), (global_move,), (0, 1))
 #@testset "PBC global_move $spec" for spec in Iterators.product((KACUDADevice(),), (1,), (global_move,), (1,))
-    
-    #@show spec
+    CUDA.reclaim()
+    @show spec
 
     target_device = spec[1]
     ndim = spec[2]
@@ -126,6 +127,7 @@ end
     
     #Base.GC.enable(false)
     #@show rank
+
     for stepx in 1:200
         #@show stepx, getpid(), spec
         execute(advection)
@@ -151,9 +153,15 @@ end
                 @test (norm(A["P"][px, dx] - correct_position[dx], Inf) < tol) || (abs(norm(A["P"][px, dx] - correct_position[dx], Inf) - extents[dx]) < tol)
             end
         end
+
+        #MPI.Barrier(domain.comm)
+        
+        #Base.GC.enable(true)
+        #Base.GC.gc()
+        #Base.GC.enable(false)
+        #MPI.Barrier(domain.comm)
     end
     
-    #Base.GC.enable(true)
     free(A)
     free(domain)
 

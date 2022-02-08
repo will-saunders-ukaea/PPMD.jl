@@ -418,11 +418,6 @@ function neighbour_transfer_to_rank(particle_group)
 
     # wait for the recv counts
     check_mpi_error(MPI.Waitall!(recv_array))
-    if num_ranks_recv > 0
-        @show (minimum(recv_counts), maximum(recv_counts))
-    else
-        @show "no sending ranks"
-    end
 
     # allocate recv buffer
     recv_count = sum(recv_counts)
@@ -669,7 +664,9 @@ function global_move(particle_group)
     # Map the particle positions to MPI ranks
     execute(particle_group.position_to_rank_task)
     # Transfer ownership to the new ranks
+    Base.GC.enable(false)
     global_transfer_to_rank(particle_group)
+    Base.GC.enable(true)
 end
 
 
