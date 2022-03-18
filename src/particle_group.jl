@@ -673,14 +673,21 @@ end
 """
 Pretty(ish) printing of ParticleGroups (slow - intended for debugging).
 """
-function Base.show(io::IO, particle_group::ParticleGroup)
+function Base.show(io::IO, particle_group::ParticleGroup, dats=[])
     print(io, "\n")
 
     N = particle_group.npart_local
     
     data_titles = Stack{String}()
+    
+    if length(dats) == 0
+        particle_dats = particle_group.particle_dats
+    else
+        particle_dats = Dict([(dx, particle_group[dx]) for dx in dats])
+    end
 
-    for datx in particle_group.particle_dats
+
+    for datx in particle_dats
         name = datx.first
         ncomp = datx.second.ncomp
         
@@ -690,7 +697,7 @@ function Base.show(io::IO, particle_group::ParticleGroup)
 
     end
     
-    data_columns = hcat([convert(Array{Any}, datx.second[1:N, :]) for datx in particle_group.particle_dats]...)
+    data_columns = hcat([convert(Array{Any}, datx.second[1:N, :]) for datx in particle_dats]...)
     data_titles = [tx for tx in Iterators.reverse(data_titles)]
     pretty_table(io, data_columns, data_titles)
 

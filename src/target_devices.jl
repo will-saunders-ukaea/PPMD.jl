@@ -27,6 +27,7 @@ struct KACUDADevice <: KernelAbstractionsDevice
     function KACUDADevice(workgroup_size=32)
         if CUDA.functional()
             # set the device round robin on local mpi rank
+            LOCAL_RANK = get_local_rank()
             device_id = LOCAL_RANK % length(CUDA.devices())
             CUDA.device!(device_id)
             return new(CUDADevice(), device_id, workgroup_size, CuArray)

@@ -1,4 +1,4 @@
-export MinimalWidthCartesianMesh, get_map_particle_to_cell_task
+export MinimalWidthCartesianMesh, get_map_particle_to_cell_task, get_cell_origins_widths
 
 
 """
@@ -116,5 +116,30 @@ function get_map_particle_to_cell_task(mesh::MinimalWidthCartesianMesh, particle
     return bin_loop
 
 end
+
+
+"""
+Get the coordinates of the lower left corner of each cell.
+"""
+function get_cell_origins_widths(mesh::MinimalWidthCartesianMesh, target_device)
+
+    ndim = mesh.domain.ndim
+    origins = CellDat(mesh, (1, ndim), Float64, target_device)
+    widths = CellDat(mesh, (1, ndim), Float64, target_device)
+    
+    index = 0
+    for cellx in Iterators.product([1:mesh.cell_dim[dx] for dx in 1:ndim]...)
+        index += 1
+        for dimx in 1:ndim
+            origins[index, 1, dimx] = mesh.lower_bounds[dimx] + (cellx[dimx] - 1) * mesh.cell_widths[dimx]
+            widths[index, 1, dimx] = mesh.cell_widths[dimx]
+        end
+    end
+
+    return origins, widths
+end
+
+
+
 
 
