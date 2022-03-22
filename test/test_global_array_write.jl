@@ -34,7 +34,9 @@ using MPI
     )
 
     C = GlobalArray(2, target_device)
-
+    C2 = GlobalArray(2, target_device)
+    C2[1] = 4
+    C2[2] = 8
 
     kernel_copy = Kernel(
         "copy_kernel",
@@ -52,15 +54,18 @@ using MPI
             Dict(
                 "A" => (A["A"], READ),
                 "C" => (C, INC),
+                "C2" => (C2, INC_ZERO),
             )
         )
     )
 
     execute(loop)
-
+    
+    @test abs(C2[1]) < 1E-15
+    @test abs(C2[2]) < 1E-15
        
     host_reduce = MPI.Allreduce([sum(A["A"][:, 1]),], MPI.SUM, MPI.COMM_WORLD)
-
+    
     @test abs(C[1] - host_reduce[1]) < 1E-13
     @test abs(C[2] - 2.0 * host_reduce[1]) < 1E-13
 

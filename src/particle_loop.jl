@@ -49,7 +49,7 @@ function get_wrapper_param(kernel_sym, dat::GlobalArray, access_mode, target)
         return (const_modifier(kernel_sym, access_mode),)
     end
 
-    if (access_mode == INC)
+    if (access_mode in [INC, INC_ZERO])
         return ("_global_$kernel_sym",)
     end
 end
@@ -170,7 +170,7 @@ function get_loop_args(N, kernel_sym, dat::GlobalArray, access_mode, target)
     if (!access_mode.write)
         return (dat.data,)
     end
-    if (access_mode == INC)
+    if ((access_mode == INC) || (access_mode == INC_ZERO))
         ngroups = Int(ceil(N / target.workgroup_size))
     end
     return (target.ArrayType{dat.dtype}(undef, (dat.ncomp, ngroups)),)
@@ -283,7 +283,7 @@ function ParticleLoop(
     )
     
     # is a syncronize required before the kernel call? e.g. for local_mem init
-    if Bool(sum([get_pre_kernel_sync(px.first, px.second[1], px.second[2], target) for px in args]))
+    if Bool(sum([get_pre_kernel_sync(px.first, px.second[1], px.second[2], target) for px in args]) > 0)
         pre_kernel_sync = "@synchronize"
     else
         pre_kernel_sync = ""

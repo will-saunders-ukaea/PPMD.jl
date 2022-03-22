@@ -20,6 +20,7 @@ using LinearAlgebra
              "P" => ParticleDat(3, position=true),
              "B" => ParticleDat(3),
              "A" => ParticleDat(1),
+             "C" => ParticleDat(1),
         ),
         target_device
     )
@@ -30,7 +31,8 @@ using LinearAlgebra
         A,
         Dict(
              "P" => rand_within_extents(N, domain.extent),
-             "A" => rand(Float64, (N, 1))
+             "A" => rand(Float64, (N, 1)),
+             "C" => rand(Float64, (N, 1))
         )
     )
 
@@ -52,12 +54,14 @@ using LinearAlgebra
             Dict(
                 "B" => (A["B"], WRITE),
                 "A" => (A["A"], READ),
+                "C" => (A["C"], INC_ZERO),
             )
         )
     )
 
     execute(loop)
     
+    @test norm(A["C"][:, 1], Inf) < 1E-14
     @test norm(A["A"][:, 1]       - A["B"][:, 1], Inf) < 1E-14
     @test norm(A["A"][:, 1] * 2.0 - A["B"][:, 2], Inf) < 1E-14
     @test norm(A["A"][:, 1] * 3.0 - A["B"][:, 3], Inf) < 1E-14

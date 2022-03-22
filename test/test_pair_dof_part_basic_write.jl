@@ -47,11 +47,15 @@ CUDA.allowscalar(true)
     ndof = 2
     CD_A = CellDat(mesh, (ndof, 2), Float64, target_device)
     CD_B = CellDat(mesh, (ndof, 1), Float64, target_device)
+    CD_C = CellDat(mesh, (ndof, 1), Float64, target_device)
 
     CD_A[:, 1, 1] = 3.0 * ones(mesh.cell_count)
     CD_A[:, 1, 2] = 4.0 * ones(mesh.cell_count)
     CD_A[:, 2, 1] = 13.0 * ones(mesh.cell_count)
     CD_A[:, 2, 2] = 14.0 * ones(mesh.cell_count)    
+
+    CD_C[:, 1, 1] = 1.0 * ones(mesh.cell_count)
+    CD_C[:, 2, 1] = 2.0 * ones(mesh.cell_count)
 
     # loop over particles and sum the values onto the dof
     kernel_dof_read = Kernel(
@@ -66,6 +70,7 @@ CUDA.allowscalar(true)
         Dict(
             "A" => (CD_A, READ),
             "B" => (CD_B, INC),
+            "C" => (CD_C, INC_ZERO),
         ),
         Dict(
             "Q" => (A["Q"], READ),
@@ -83,6 +88,7 @@ CUDA.allowscalar(true)
 
     for cellx in 1:mesh.cell_count
         @test norm(CD_B[cellx, :, 1] - correct_array[cellx, :], Inf) < 1E-12
+        @test norm(CD_C[cellx, :, 1], Inf) < 1E-15
     end
     
     free(A)

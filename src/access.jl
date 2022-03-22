@@ -1,20 +1,21 @@
-export READ, WRITE, INC, DirectAccessT, DirectArray, DirectAccess
+export READ, WRITE, INC, INC_ZERO, DirectAccessT, DirectArray, DirectAccess
 struct AccessType
     write::Bool
+    name::String
 end
 
 
 "Access descriptor for read-only access"
-READ = AccessType(false)
+READ = AccessType(false, "READ")
 
 "Access descriptor for write access"
-WRITE = AccessType(true)
+WRITE = AccessType(true, "WRITE")
 
 "Access descriptor for increment access"
-INC = AccessType(true)
+INC = AccessType(true, "INC")
 
 "Access descriptor for increment access with zeroing"
-INC_ZERO = AccessType(true)
+INC_ZERO = AccessType(true, "INC_ZERO")
 
 
 abstract type DirectAccessT end
