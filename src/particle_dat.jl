@@ -65,6 +65,14 @@ end
 
 
 """
+Zero the values in a ParticleDat
+"""
+function zero_dat(particle_dat::ParticleDat)
+    fill!(particle_dat.data, 0.0)
+end
+
+
+"""
 Create a container to store particle data, for use in ParticleDat, for a given
 compute target.
 """

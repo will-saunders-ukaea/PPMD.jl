@@ -13,6 +13,9 @@ WRITE = AccessType(true)
 "Access descriptor for increment access"
 INC = AccessType(true)
 
+"Access descriptor for increment access with zeroing"
+INC_ZERO = AccessType(true)
+
 
 abstract type DirectAccessT end
 

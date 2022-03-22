@@ -36,6 +36,7 @@ also handle any communication required before the loop launches. e.g.
 halo exchanges.
 """
 function get_loop_args(N, kernel_sym, dat::CellDat, access_mode, target)
+    zero_if_required(dat, access_mode)
     return (dat.data,)
 end
 

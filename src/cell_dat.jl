@@ -133,3 +133,11 @@ function Base.show(io::IO, cell_dat::CellDat)
         end
     end
 end
+
+
+"""
+Zero the values in a CellDat
+"""
+function zero_dat(cell_dat::CellDat)
+    fill!(cell_dat.data, 0.0)
+end

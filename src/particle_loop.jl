@@ -151,13 +151,22 @@ Get the calling arguments for the data structure and access mode. This may
 also handle any communication required before the loop launches. e.g.
 halo exchanges.
 """
+function zero_if_required(dat, access_mode)
+    if (access_mode == INC_ZERO)
+        zero_dat(dat)
+    end
+    return
+end
 function get_loop_args(N, kernel_sym, dat::ParticleDat, access_mode, target)
+    zero_if_required(dat, access_mode)
     return (dat.data,)
 end
 function get_loop_args(N, kernel_sym, dat::T, access_mode, target) where T<: DirectAccessT
+    zero_if_required(dat, access_mode)
     return (dat.dat.data,)
 end
 function get_loop_args(N, kernel_sym, dat::GlobalArray, access_mode, target)
+    zero_if_required(dat, access_mode)
     if (!access_mode.write)
         return (dat.data,)
     end

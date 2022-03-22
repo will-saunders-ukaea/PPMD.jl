@@ -54,3 +54,11 @@ function increment(dat::GlobalArray, value::Array)
 end
 
 
+"""
+Zero the values in a GlobalArray
+"""
+function zero_dat(global_array::GlobalArray)
+    fill!(global_array.data, 0.0)
+end
+
+
